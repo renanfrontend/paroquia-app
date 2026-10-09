@@ -118,75 +118,31 @@ export const prayerService = {
   /**
    * Incrementar contador de "Rezei por você"
    */
-  async recordPrayerSupport(prayerId: string): Promise<void> {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+  async recordPrayerSupport(prayerId: string): Promise<number> {
+    // Função do banco (supabase-schema.sql): registra a intercessão e soma 1, uma vez por pessoa logada.
+    // Os contadores não podem ser alterados direto na tabela.
+    const { data, error } = await supabase.rpc('increment_prayer_support', { p_prayer_id: prayerId })
 
-    // Registrar intercessão
-    const { error: insertError } = await supabase
-      .from('prayer_supports')
-      .insert({
-        prayer_id: prayerId,
-        user_id: user?.id || null,
-      })
-
-    if (insertError && !insertError.message.includes('duplicate')) {
-      console.error('Error recording prayer support:', insertError)
-      throw insertError
+    if (error) {
+      console.error('Error recording prayer support:', error)
+      throw error
     }
 
-    // Incrementar contador
-    const { data: prayer, error: selectError } = await supabase
-      .from('prayer_requests')
-      .select('prayers_count')
-      .eq('id', prayerId)
-      .single()
-
-    if (selectError) {
-      console.error('Error fetching prayer count:', selectError)
-      throw selectError
-    }
-
-    const { error: updateError } = await supabase
-      .from('prayer_requests')
-      .update({
-        prayers_count: (prayer.prayers_count || 0) + 1,
-      })
-      .eq('id', prayerId)
-
-    if (updateError) {
-      console.error('Error updating prayer count:', updateError)
-      throw updateError
-    }
+    return data ?? 0
   },
 
   /**
    * Acender vela virtual (incrementar contador de velas)
    */
-  async lightCandle(prayerId: string): Promise<void> {
-    const { data: prayer, error: selectError } = await supabase
-      .from('prayer_requests')
-      .select('candles_lit')
-      .eq('id', prayerId)
-      .single()
+  async lightCandle(prayerId: string): Promise<number> {
+    const { data, error } = await supabase.rpc('light_candle', { p_prayer_id: prayerId })
 
-    if (selectError) {
-      console.error('Error fetching candle count:', selectError)
-      throw selectError
+    if (error) {
+      console.error('Error lighting candle:', error)
+      throw error
     }
 
-    const { error: updateError } = await supabase
-      .from('prayer_requests')
-      .update({
-        candles_lit: (prayer.candles_lit || 0) + 1,
-      })
-      .eq('id', prayerId)
-
-    if (updateError) {
-      console.error('Error lighting candle:', updateError)
-      throw updateError
-    }
+    return data ?? 0
   },
 
   /**

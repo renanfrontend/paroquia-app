@@ -19,6 +19,8 @@ jobs:
         with:
           # Node 22 roda os testes em TypeScript sem compilar (--experimental-strip-types).
           node-version: 22
+          cache: npm
+      - run: npm ci
       - run: npm test
   web:
     runs-on: ubuntu-latest

@@ -280,7 +280,28 @@ export interface Database {
       }
     }
     Views: Record<never, never>
-    Functions: Record<never, never>
+    Functions: {
+      increment_prayer_support: {
+        Args: { p_prayer_id: string }
+        Returns: number
+      }
+      light_candle: {
+        Args: { p_prayer_id: string }
+        Returns: number
+      }
+      like_news: {
+        Args: { p_news_id: string }
+        Returns: number
+      }
+      has_parish_role: {
+        Args: { roles: Database['public']['Enums']['user_role'][] }
+        Returns: boolean
+      }
+      is_parish_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+    }
     Enums: {
       day_of_week: 'DOMINGO' | 'SEGUNDA' | 'TERCA' | 'QUARTA' | 'QUINTA' | 'SEXTA' | 'SABADO'
       liturgy_color: 'VERDE' | 'VERMELHO' | 'ROXO' | 'BRANCO' | 'ROSA'
