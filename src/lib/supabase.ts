@@ -1,9 +1,15 @@
+import 'react-native-url-polyfill/auto'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient as SupabaseClientType } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+
+export const isSupabaseConfigured = Boolean(
+  SUPABASE_URL && /^https?:\/\//.test(SUPABASE_URL) &&
+  SUPABASE_ANON_KEY && !SUPABASE_URL.includes('seu-projeto')
+)
 
 /**
  * Adapter customizado para persistir sessão de autenticação
@@ -37,7 +43,8 @@ class SupabaseSessionAdapter {
   }
 }
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+export const supabase: SupabaseClientType<Database> = isSupabaseConfigured
+  ? createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: new SupabaseSessionAdapter(),
     autoRefreshToken: true,
@@ -45,6 +52,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     detectSessionInUrl: false,
   },
 })
+  : new Proxy({} as SupabaseClientType<Database>, {
+      get() { throw new Error('Supabase ainda não configurado neste build.') },
+    })
 
 /**
  * Função helper para cache offline da Liturgia Diária
@@ -95,27 +105,6 @@ export const cacheManager = {
       console.error('Error retrieving cached news posts:', error)
       return null
     }
-  },
-}
-
-/**
- * Helpers para RPC calls (se necessário para operações complexas)
- */
-export const supabaseRpc = {
-  async incrementPrayerCount(prayerId: string) {
-    const { data, error } = await supabase.rpc('increment_prayer_count', {
-      prayer_id: prayerId,
-    })
-    if (error) throw error
-    return data
-  },
-
-  async incrementCandleCount(prayerId: string) {
-    const { data, error } = await supabase.rpc('increment_candle_count', {
-      prayer_id: prayerId,
-    })
-    if (error) throw error
-    return data
   },
 }
 

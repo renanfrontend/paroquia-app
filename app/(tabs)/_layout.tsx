@@ -1,6 +1,4 @@
-import React from 'react'
 import { Tabs } from 'expo-router'
-import { Dimensions } from 'react-native'
 import {
   Clock,
   BookOpen,

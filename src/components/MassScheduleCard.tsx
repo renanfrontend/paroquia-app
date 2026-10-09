@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { View, Text, TouchableOpacity, Alert } from 'react-native'
 import { Bell, MapPin, User } from 'lucide-react-native'
 import * as Notifications from 'expo-notifications'
-import { format, parse } from 'date-fns'
 import { Database } from '@/types/database.types'
 
 interface MassScheduleCardProps {
@@ -61,7 +60,7 @@ export function MassScheduleCard({
 
   return (
     <View
-      className={`card mb-3 ${isUpcoming ? 'border-l-4 border-l-red-600' : ''}`}
+      className={`bg-white rounded-lg shadow-sm p-4 border border-gray-100 mb-3 ${isUpcoming ? 'border-l-4 border-l-red-600' : ''}`}
     >
       {/* Header com tipo e localização */}
       <View className="flex-row items-center justify-between mb-3">

@@ -15,7 +15,13 @@ Aplicativo mobile para aproximar a comunidade da vida paroquial: horários de ce
 
 ## Demonstração
 
-O repositório ainda não inclui vídeo, screenshots ou endereço de demonstração. A avaliação local depende da configuração do Supabase e dos ajustes de ambiente descritos abaixo.
+A versão web e o APK de teste são gerados pelo workflow [Web e APK Android](https://github.com/renanfrontend/paroquia-app/actions/workflows/build.yml).
+
+- **Web:** o job de deploy publica no GitHub Pages quando **Settings → Pages → Source → GitHub Actions** estiver habilitado.
+- **APK:** após o job Android concluir, baixe o artifact **paroquia-android-apk**, extraia o ZIP e instale o APK. É um build standalone assinado com chave de desenvolvimento, destinado a testes, sem necessidade do Expo Go. Não é uma versão assinada para distribuição na Play Store.
+- **Backend:** configure a variável de Actions `EXPO_PUBLIC_SUPABASE_URL` e o secret `EXPO_PUBLIC_SUPABASE_ANON_KEY` (somente chave pública anon). Execute o workflow novamente. Sem esses valores, o aplicativo abre uma tela informando que os serviços ainda não foram configurados; os módulos não estarão operacionais.
+
+Não há vídeo de demonstração versionado.
 
 ## Funcionalidades
 
@@ -69,7 +75,7 @@ Consulte também [ARCHITECTURE.md](ARCHITECTURE.md), documento de referência qu
 ```bash
 git clone https://github.com/renanfrontend/paroquia-app.git
 cd paroquia-app
-npm install
+npm ci
 cp .env.example .env.local
 ```
 
@@ -110,34 +116,36 @@ Use os atalhos do Expo para o ambiente configurado. A CLI do Expo é fornecida p
 | `npm start` | Iniciar o servidor Expo |
 | `npm run android` | Iniciar Expo para Android |
 | `npm run ios` | Iniciar Expo para iOS |
-| `npm run web` | Iniciar o alvo web; requer completar e validar a configuração web |
+| `npm run web` | Iniciar o servidor web |
 | `npm run type-check` | Verificar tipos sem emitir arquivos |
-| `npm run lint` | Executar ESLint; a configuração não está versionada |
+| `npm run lint` | Executar ESLint com a configuração versionada |
+| `npm run build:web` | Exportar a versão web para `dist/` |
+| `npm run build:apk` | Gerar APK pelo perfil EAS `preview` |
 | `npm run prebuild` | Gerar novamente os projetos nativos com `expo prebuild --clean`; pode substituir alterações nativas manuais |
 | `npm run build:android` | Solicitar build Android via EAS |
 | `npm run build:ios` | Solicitar build iOS via EAS |
 
-Os scripts EAS exigem CLI disponível, conta/projeto configurados e configuração de build. O repositório ainda não inclui `eas.json`.
+Os scripts EAS exigem CLI disponível, conta/projeto configurados e configuração de build. O perfil `preview` de `eas.json` gera APK; execute `npm run build:apk` após configurar sua conta e projeto EAS. Esse caminho é opcional: o workflow Android compila diretamente com Gradle.
 
 ## Verificação e limites atuais
 
 Esta documentação foi conferida com os arquivos do repositório; não certifica execução, build ou integração com um Supabase real.
 
-- Não há workflow de CI, suíte de testes ou lockfile versionados.
-- `app.json` referencia imagens em `assets/`, mas essa pasta não está presente na árvore atual.
-- A configuração de ESLint e os arquivos de configuração Babel/Metro não estão versionados; a integração de estilos e execução precisa ser validada.
+- O workflow executa TypeScript, ESLint, exportação web e build Android. O lockfile está versionado; ainda não há suíte de testes de integração.
+- Ícones do aplicativo e de notificações estão em `assets/`.
+- Babel, Metro, NativeWind, PostCSS e ESLint estão configurados; a validação em dispositivo físico permanece necessária.
 - O gerador de payload PIX está explicitamente simplificado em `src/services/pixService.ts`; o QR Code não deve ser apresentado como cobrança homologada. Não há confirmação bancária de pagamento.
 - A opção de oração privada existe na interface, mas o acesso de autor e responsáveis deve ser conferido nas políticas RLS. O schema não define um papel específico de padre.
 - Persistência de sessão utiliza AsyncStorage. Tipagem TypeScript não substitui autorização no banco.
-- Não há publicação em lojas ou deploy automatizado documentados no repositório.
+- O deploy web depende da habilitação do GitHub Pages. O APK de teste não equivale a publicação em loja. Build concluído não certifica login, permissões ou pagamentos com backend real.
 
 ## Próximos passos
 
-- Completar os assets e a configuração de execução/build.
+- Configurar e homologar o Supabase da paróquia.
 - Validar tipos, lint e fluxos em dispositivos.
 - Revisar permissões por perfil e pedidos privados.
 - Substituir o gerador simplificado de PIX e validar o fluxo de contribuição.
-- Adicionar testes, CI e demonstração visual.
+- Adicionar testes de integração e demonstração visual.
 - Avaliar tema escuro, paginação e autenticação social como evoluções futuras.
 
 ## Autoria
@@ -170,7 +178,7 @@ Run `npm start` with an environment compatible with Expo SDK 51. Available scrip
 
 ### Current status
 
-This is a work in progress, not a verified production release. Referenced image assets, ESLint configuration and EAS build configuration are missing from the current repository. No automated tests, CI workflow, lockfile or public demo are included. Runtime, builds and live backend integration were not validated during this documentation update.
+This is a work in progress, not a verified production release. The repository includes image assets, ESLint/Babel/Metro configuration, an npm lockfile, an EAS APK profile and a GitHub Actions workflow for web deployment and standalone Android test APKs. Enable GitHub Pages with GitHub Actions as the source. Download the Android artifact after a successful build; it uses a development signing key, not a production store identity. Configure the Supabase URL repository variable and public anon key secret before rebuilding to enable live features. Without them, the app displays a setup-pending screen. Physical-device and live-backend validation remain required.
 
 The PIX payload generator is a simplified implementation, not a validated payment flow. Private prayer access requires policy review. Local caches do not provide full offline support.
 

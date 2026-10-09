@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
 import { ZoomIn, ZoomOut } from 'lucide-react-native'
 import { Database } from '@/types/database.types'
@@ -29,7 +29,7 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
 
   const liturgyColor = LITURGY_COLOR_MAP[liturgy.liturgical_color] || '#10b981'
   const colorName =
-    Object.entries(LITURGY_COLOR_MAP).find(([_, v]) => v === liturgyColor)?.[0] || 'VERDE'
+    Object.entries(LITURGY_COLOR_MAP).find(([, v]) => v === liturgyColor)?.[0] || 'VERDE'
 
   return (
     <View className="flex-1 bg-white">

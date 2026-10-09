@@ -102,7 +102,7 @@ export const liturgyService = {
   subscribeToLiturgyUpdates(
     date: Date,
     onUpdate: (liturgy: DailyLiturgy) => void,
-    onError?: (error: any) => void,
+    onError?: (error: unknown) => void,
   ) {
     const dateStr = format(date, 'yyyy-MM-dd')
 
@@ -124,11 +124,11 @@ export const liturgyService = {
           }
         },
       )
-      .on('system', { event: 'error' }, ({ message }) => {
-        console.error('Supabase subscription error:', message)
-        onError?.(message)
+      .subscribe((status, error) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          onError?.(error ?? new Error(status))
+        }
       })
-      .subscribe()
 
     return () => {
       supabase.removeChannel(channel)

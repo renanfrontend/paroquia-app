@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { View, Text, TouchableOpacity, Alert } from 'react-native'
 import { Copy, CheckCircle } from 'lucide-react-native'
 import * as Clipboard from 'expo-clipboard'
@@ -13,8 +13,6 @@ interface PixCopyButtonProps {
 export function PixCopyButton({
   pixKey,
   pixKeyType,
-  parishName,
-  value,
 }: PixCopyButtonProps) {
   const [isCopied, setIsCopied] = useState(false)
 

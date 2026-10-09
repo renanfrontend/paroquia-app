@@ -3,20 +3,25 @@
     "name": "Paróquia Conectada",
     "slug": "paroquia-conectada",
     "version": "1.0.0",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTabletMode": true,
-      "bundleIdentifier": "com.paroquiaconectada.app"
+      "bundleIdentifier": "com.paroquiaconectada.app",
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-        "backgroundImage": "./assets/icon-bg.png"
+        "backgroundColor": "#dc2626"
       },
       "package": "com.paroquiaconectada.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "Paróquia Conectada"
     },
     "scheme": "paroquiaconectada",
     "plugins": [
@@ -29,9 +34,7 @@
       ],
       "expo-router"
     ],
-    "experiments": {
-      "tsTester": true
-    },
+    "experiments": {},
     "extra": {
       "router": {
         "origin": false
@@ -40,6 +43,7 @@
     "notification": {
       "icon": "./assets/notification-icon.png",
       "color": "#dc2626"
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }

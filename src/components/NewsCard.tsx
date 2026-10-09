@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { View, Text, TouchableOpacity, Image, Share } from 'react-native'
 import { Heart, Share2, Pin } from 'lucide-react-native'
 import { Database } from '@/types/database.types'
@@ -71,7 +71,7 @@ export function NewsCard({ news, onLike }: NewsCardProps) {
   })
 
   return (
-    <View className="card mb-3 overflow-hidden">
+    <View className="bg-white rounded-lg shadow-sm p-4 border border-gray-100 mb-3 overflow-hidden">
       {/* Imagem (se houver) */}
       {news.image_url && (
         <Image

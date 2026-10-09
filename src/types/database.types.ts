@@ -276,8 +276,8 @@ export interface Database {
         }
       }
     }
-    Views: {}
-    Functions: {}
+    Views: Record<never, never>
+    Functions: Record<never, never>
     Enums: {
       day_of_week: 'DOMINGO' | 'SEGUNDA' | 'TERCA' | 'QUARTA' | 'QUINTA' | 'SEXTA' | 'SABADO'
       liturgy_color: 'VERDE' | 'VERMELHO' | 'ROXO' | 'BRANCO' | 'ROSA'

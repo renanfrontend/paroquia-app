@@ -160,7 +160,7 @@ export const newsService = {
   subscribeToNewNews(
     onInsert: (news: NewsPost) => void,
     onUpdate?: (news: NewsPost) => void,
-    onError?: (error: any) => void,
+    onError?: (error: unknown) => void,
   ) {
     const channel = supabase
       .channel('new_news')
@@ -190,11 +190,11 @@ export const newsService = {
           }
         },
       )
-      .on('system', { event: 'error' }, ({ message }) => {
-        console.error('Supabase subscription error:', message)
-        onError?.(message)
+      .subscribe((status, error) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          onError?.(error ?? new Error(status))
+        }
       })
-      .subscribe()
 
     return () => {
       supabase.removeChannel(channel)

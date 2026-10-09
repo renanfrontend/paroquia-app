@@ -194,7 +194,7 @@ export const prayerService = {
    */
   subscribeToNewPrayers(
     onInsert: (prayer: PrayerRequest) => void,
-    onError?: (error: any) => void,
+    onError?: (error: unknown) => void,
   ) {
     const channel = supabase
       .channel('new_prayers')
@@ -212,11 +212,11 @@ export const prayerService = {
           }
         },
       )
-      .on('system', { event: 'error' }, ({ message }) => {
-        console.error('Supabase subscription error:', message)
-        onError?.(message)
+      .subscribe((status, error) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          onError?.(error ?? new Error(status))
+        }
       })
-      .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
@@ -229,7 +229,7 @@ export const prayerService = {
   subscribeToCounterUpdates(
     prayerId: string,
     onUpdate: (prayer: PrayerRequest) => void,
-    onError?: (error: any) => void,
+    onError?: (error: unknown) => void,
   ) {
     const channel = supabase
       .channel(`prayer_${prayerId}`)
@@ -247,11 +247,11 @@ export const prayerService = {
           }
         },
       )
-      .on('system', { event: 'error' }, ({ message }) => {
-        console.error('Supabase subscription error:', message)
-        onError?.(message)
+      .subscribe((status, error) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          onError?.(error ?? new Error(status))
+        }
       })
-      .subscribe()
 
     return () => {
       supabase.removeChannel(channel)

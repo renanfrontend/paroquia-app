@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { View, Text, TouchableOpacity } from 'react-native'
 import { Heart, Flame } from 'lucide-react-native'
 import { supabase } from '@/lib/supabase'
@@ -95,7 +95,7 @@ export function PrayerItem({ prayer, onUpdate }: PrayerItemProps) {
   })
 
   return (
-    <View className="card mb-3">
+    <View className="bg-white rounded-lg shadow-sm p-4 border border-gray-100 mb-3">
       {/* Categoria e autor */}
       <View className="flex-row items-start justify-between mb-2">
         <Text className="text-xs font-semibold text-gray-600">

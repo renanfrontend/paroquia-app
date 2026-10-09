@@ -71,12 +71,12 @@ export const pixService = {
     // Calcular primeiro dígito verificador
     let size = cleanCNPJ.length - 2
     let numbers = cleanCNPJ.substring(0, size)
-    let digits = cleanCNPJ.substring(size)
+    const digits = cleanCNPJ.substring(size)
     let sum = 0
     let pos = size - 7
 
     for (let i = size; i >= 1; i--) {
-      sum += numbers.charAt(size - i) * pos--
+      sum += Number(numbers.charAt(size - i)) * pos--
       if (pos < 2) {
         pos = 9
       }
@@ -95,7 +95,7 @@ export const pixService = {
     pos = size - 7
 
     for (let i = size; i >= 1; i--) {
-      sum += numbers.charAt(size - i) * pos--
+      sum += Number(numbers.charAt(size - i)) * pos--
       if (pos < 2) {
         pos = 9
       }
