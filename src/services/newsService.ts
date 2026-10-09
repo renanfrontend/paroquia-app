@@ -128,30 +128,15 @@ export const newsService = {
    * Incrementar contador de likes
    */
   async likeNews(newsId: string): Promise<number> {
-    const { data: news, error: selectError } = await supabase
-      .from('news_posts')
-      .select('likes_count')
-      .eq('id', newsId)
-      .single()
+    // Função do banco: só a liderança edita notícias, então o contador sobe por aqui.
+    const { data, error } = await supabase.rpc('like_news', { p_news_id: newsId })
 
-    if (selectError) {
-      console.error('Error fetching news likes:', selectError)
-      throw selectError
+    if (error) {
+      console.error('Error updating likes:', error)
+      throw error
     }
 
-    const { error: updateError } = await supabase
-      .from('news_posts')
-      .update({
-        likes_count: (news.likes_count || 0) + 1,
-      })
-      .eq('id', newsId)
-
-    if (updateError) {
-      console.error('Error updating likes:', updateError)
-      throw updateError
-    }
-
-    return (news.likes_count || 0) + 1
+    return data ?? 0
   },
 
   /**

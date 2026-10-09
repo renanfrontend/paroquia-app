@@ -4,7 +4,7 @@
 -- ==============================================================================
 
 -- 1. EXTENSÕES & ENUMS
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- IDs com gen_random_uuid(), nativo do Postgres 13+ (dispensa a extensão uuid-ossp).
 
 CREATE TYPE user_role AS ENUM ('MEMBER', 'PASTORAL_LEADER', 'ADMIN_PARISH');
 CREATE TYPE day_of_week AS ENUM ('DOMINGO', 'SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO');
@@ -34,7 +34,7 @@ CREATE INDEX idx_profiles_role ON public.profiles(role);
 -- 3. TABELA DE HORÁRIOS DE MISSAS E CELEBRAÇÕES
 -- ==============================================================================
 CREATE TABLE public.mass_schedules (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   day_of_week day_of_week NOT NULL,
   time TIME NOT NULL,
   location TEXT NOT NULL DEFAULT 'Igreja Matriz',
@@ -53,7 +53,7 @@ CREATE INDEX idx_mass_type ON public.mass_schedules(type) WHERE is_active = TRUE
 -- 4. TABELA DE LITURGIA DIÁRIA
 -- ==============================================================================
 CREATE TABLE public.daily_liturgy (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   date DATE UNIQUE NOT NULL,
   liturgical_color liturgy_color NOT NULL DEFAULT 'VERDE',
   title TEXT NOT NULL,
@@ -78,7 +78,7 @@ CREATE INDEX idx_liturgy_color ON public.daily_liturgy(liturgical_color);
 -- 5. TABELA DE MURAL DE NOTÍCIAS E AVISOS
 -- ==============================================================================
 CREATE TABLE public.news_posts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   summary TEXT NOT NULL,
   content TEXT NOT NULL,
@@ -100,10 +100,10 @@ CREATE INDEX idx_news_pinned ON public.news_posts(is_pinned) WHERE is_pinned = T
 -- 6. TABELA DE PEDIDOS DE ORAÇÃO & INTENÇÕES
 -- ==============================================================================
 CREATE TABLE public.prayer_requests (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-  author_name TEXT NOT NULL,
-  intention TEXT NOT NULL,
+  author_name TEXT NOT NULL CHECK (char_length(author_name) BETWEEN 1 AND 80),
+  intention TEXT NOT NULL CHECK (char_length(intention) BETWEEN 1 AND 1000),
   category prayer_category NOT NULL DEFAULT 'INTENCAO_GERAL',
   is_private BOOLEAN DEFAULT FALSE,
   is_approved BOOLEAN DEFAULT TRUE,
@@ -118,7 +118,7 @@ CREATE INDEX idx_prayer_trending ON public.prayer_requests(prayers_count DESC) W
 
 -- Tabela para registro de intercessão ("Rezei por você")
 CREATE TABLE public.prayer_supports (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   prayer_id UUID NOT NULL REFERENCES public.prayer_requests(id) ON DELETE CASCADE,
   user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -130,7 +130,7 @@ CREATE INDEX idx_prayer_supports_prayer ON public.prayer_supports(prayer_id);
 -- 7. TABELA DE CONFIGURAÇÃO DE DÍZIMO E CHAVE PIX PAROQUIAL
 -- ==============================================================================
 CREATE TABLE public.tithe_info (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parish_name TEXT NOT NULL DEFAULT 'Paróquia Nossa Senhora das Graças',
   cnpj TEXT NOT NULL,
   pix_key TEXT NOT NULL,
@@ -156,79 +156,188 @@ ALTER TABLE public.prayer_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.prayer_supports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tithe_info ENABLE ROW LEVEL SECURITY;
 
--- Perfil: Leitura do próprio perfil + admin lê todos
+-- Papel de quem está logado. SECURITY DEFINER lê profiles sem passar pelas políticas:
+-- consultar profiles dentro de uma política de profiles causaria "infinite recursion".
+CREATE OR REPLACE FUNCTION public.has_parish_role(roles user_role[])
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = ANY (roles)
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_parish_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.has_parish_role(ARRAY['ADMIN_PARISH']::user_role[]);
+$$;
+
+-- Perfil: cada um lê e edita o próprio; a administração lê e edita todos.
 CREATE POLICY "Users read own profile" ON public.profiles
-  FOR SELECT USING (auth.uid() = id OR EXISTS (
-    SELECT 1 FROM public.profiles 
-    WHERE id = auth.uid() AND role = 'ADMIN_PARISH'
-  ));
+  FOR SELECT USING (auth.uid() = id OR public.is_parish_admin());
 
 CREATE POLICY "Users update own profile" ON public.profiles
-  FOR UPDATE USING (auth.uid() = id);
+  FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
--- Horários de Missas: Leitura pública / Escrita para Admins
+CREATE POLICY "Admins update profiles" ON public.profiles
+  FOR UPDATE USING (public.is_parish_admin()) WITH CHECK (public.is_parish_admin());
+
+-- Horários de Missas: leitura pública / escrita da administração
 CREATE POLICY "Public read mass schedules" ON public.mass_schedules
   FOR SELECT USING (true);
 
 CREATE POLICY "Admins manage mass schedules" ON public.mass_schedules
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN_PARISH')
-  );
+  FOR ALL USING (public.is_parish_admin()) WITH CHECK (public.is_parish_admin());
 
--- Liturgia: Leitura pública
+-- Liturgia: leitura pública / escrita da administração
 CREATE POLICY "Public read daily liturgy" ON public.daily_liturgy
   FOR SELECT USING (true);
 
 CREATE POLICY "Admins manage daily liturgy" ON public.daily_liturgy
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN_PARISH')
-  );
+  FOR ALL USING (public.is_parish_admin()) WITH CHECK (public.is_parish_admin());
 
--- Notícias: Leitura pública / Escrita Admins e Líderes
+-- Notícias: leitura pública / escrita de administração e lideranças
 CREATE POLICY "Public read news posts" ON public.news_posts
   FOR SELECT USING (true);
 
 CREATE POLICY "Leaders publish news" ON public.news_posts
-  FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role IN ('ADMIN_PARISH', 'PASTORAL_LEADER'))
-  );
+  FOR INSERT WITH CHECK (public.has_parish_role(ARRAY['ADMIN_PARISH', 'PASTORAL_LEADER']::user_role[]));
 
-CREATE POLICY "Leaders update their news" ON public.news_posts
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.profiles 
-      WHERE id = auth.uid() AND role IN ('ADMIN_PARISH', 'PASTORAL_LEADER'))
-  );
+CREATE POLICY "Leaders update news" ON public.news_posts
+  FOR UPDATE USING (public.has_parish_role(ARRAY['ADMIN_PARISH', 'PASTORAL_LEADER']::user_role[]))
+  WITH CHECK (public.has_parish_role(ARRAY['ADMIN_PARISH', 'PASTORAL_LEADER']::user_role[]));
 
--- Pedidos de Oração: Públicas aprovadas ou privadas do próprio usuário ou admin
+CREATE POLICY "Admins delete news" ON public.news_posts
+  FOR DELETE USING (public.is_parish_admin());
+
+-- Pedidos de Oração: públicos aprovados, os próprios ou todos para a administração
 CREATE POLICY "Read approved public prayers" ON public.prayer_requests
   FOR SELECT USING (
-    (is_private = FALSE AND is_approved = TRUE) 
+    (is_private = FALSE AND is_approved = TRUE)
     OR auth.uid() = user_id
-    OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN_PARISH')
+    OR public.is_parish_admin()
   );
 
+-- Qualquer pessoa pode pedir oração, mas só em nome próprio (ou sem conta) e sem contadores inflados.
 CREATE POLICY "Anyone can insert prayer request" ON public.prayer_requests
-  FOR INSERT WITH CHECK (true);
+  FOR INSERT WITH CHECK (
+    (user_id IS NULL OR user_id = auth.uid())
+    AND COALESCE(prayers_count, 0) = 0
+    AND COALESCE(candles_lit, 0) = 0
+  );
 
-CREATE POLICY "Update prayer counters" ON public.prayer_requests
-  FOR UPDATE USING (true); -- Qualquer um pode incrementar contadores
+-- Moderação pela administração; quem pediu pode apagar o próprio pedido.
+-- Contadores mudam só pelas funções increment_prayer_support e light_candle.
+CREATE POLICY "Admins moderate prayers" ON public.prayer_requests
+  FOR UPDATE USING (public.is_parish_admin()) WITH CHECK (public.is_parish_admin());
 
--- Suporte de oração (intercessão)
+CREATE POLICY "Authors or admins delete prayers" ON public.prayer_requests
+  FOR DELETE USING (auth.uid() = user_id OR public.is_parish_admin());
+
+-- Suporte de oração (intercessão): só a contagem é pública; registro via increment_prayer_support.
 CREATE POLICY "Public read prayer supports" ON public.prayer_supports
   FOR SELECT USING (true);
 
-CREATE POLICY "Anyone can insert support" ON public.prayer_supports
-  FOR INSERT WITH CHECK (true);
-
--- Dízimo: Leitura pública
+-- Dízimo: leitura pública / escrita da administração
 CREATE POLICY "Public read tithe info" ON public.tithe_info
   FOR SELECT USING (true);
 
 CREATE POLICY "Admins manage tithe info" ON public.tithe_info
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'ADMIN_PARISH')
-  );
+  FOR ALL USING (public.is_parish_admin()) WITH CHECK (public.is_parish_admin());
+
+-- ==============================================================================
+-- 8.1 FUNÇÕES DE CONTADORES (chamadas pelo app com supabase.rpc)
+-- ==============================================================================
+-- Cada função soma 1 e nada mais, e só em pedidos/notícias que a pessoa pode ver.
+
+-- Uma intercessão por pessoa logada em cada pedido; sem conta, sempre conta.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prayer_supports_unique_user
+  ON public.prayer_supports(prayer_id, user_id) WHERE user_id IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION public.increment_prayer_support(p_prayer_id UUID)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  inserted INT;
+  total INT;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.prayer_requests
+    WHERE id = p_prayer_id
+      AND ((is_private = FALSE AND is_approved = TRUE) OR user_id = auth.uid() OR public.is_parish_admin())
+  ) THEN
+    RAISE EXCEPTION 'Pedido de oração não encontrado' USING ERRCODE = 'P0002';
+  END IF;
+
+  INSERT INTO public.prayer_supports (prayer_id, user_id)
+  VALUES (p_prayer_id, auth.uid())
+  ON CONFLICT DO NOTHING;
+  GET DIAGNOSTICS inserted = ROW_COUNT;
+
+  IF inserted > 0 THEN
+    UPDATE public.prayer_requests SET prayers_count = COALESCE(prayers_count, 0) + 1
+    WHERE id = p_prayer_id RETURNING prayers_count INTO total;
+  ELSE
+    SELECT prayers_count INTO total FROM public.prayer_requests WHERE id = p_prayer_id;
+  END IF;
+  RETURN total;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.light_candle(p_prayer_id UUID)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  total INT;
+BEGIN
+  UPDATE public.prayer_requests SET candles_lit = COALESCE(candles_lit, 0) + 1
+  WHERE id = p_prayer_id
+    AND ((is_private = FALSE AND is_approved = TRUE) OR user_id = auth.uid() OR public.is_parish_admin())
+  RETURNING candles_lit INTO total;
+  IF total IS NULL THEN
+    RAISE EXCEPTION 'Pedido de oração não encontrado' USING ERRCODE = 'P0002';
+  END IF;
+  RETURN total;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.like_news(p_news_id UUID)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  total INT;
+BEGIN
+  UPDATE public.news_posts SET likes_count = COALESCE(likes_count, 0) + 1
+  WHERE id = p_news_id
+  RETURNING likes_count INTO total;
+  IF total IS NULL THEN
+    RAISE EXCEPTION 'Notícia não encontrada' USING ERRCODE = 'P0002';
+  END IF;
+  RETURN total;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.increment_prayer_support(UUID) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.light_candle(UUID) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.like_news(UUID) TO anon, authenticated;
 
 -- ==============================================================================
 -- 9. TRIGGERS AUTOMÁTICOS
@@ -236,7 +345,11 @@ CREATE POLICY "Admins manage tithe info" ON public.tithe_info
 
 -- Trigger para criar perfil automático no auth.users signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   INSERT INTO public.profiles (id, full_name, email, role)
   VALUES (
@@ -247,21 +360,44 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Ninguém muda o próprio papel (MEMBER → ADMIN_PARISH): só a administração ou o SQL Editor.
+-- No SQL Editor não há usuário logado (auth.uid() nulo), então dá para nomear o primeiro admin.
+CREATE OR REPLACE FUNCTION public.protect_profile_role()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.role IS DISTINCT FROM OLD.role AND auth.uid() IS NOT NULL AND NOT public.is_parish_admin() THEN
+    RAISE EXCEPTION 'Apenas a administração da paróquia pode alterar papéis' USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS protect_profile_role ON public.profiles;
+CREATE TRIGGER protect_profile_role BEFORE UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.protect_profile_role();
+
 -- Trigger para atualizar updated_at
 CREATE OR REPLACE FUNCTION public.update_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles
