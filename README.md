@@ -1,240 +1,177 @@
-# Paróquia Conectada - React Native App
+# Paróquia Conectada
 
-> Aplicativo mobile para digitalizar comunicação e engajamento paroquial (Expo Router v3, Supabase, TypeScript)
+![Expo SDK 51](https://img.shields.io/badge/Expo-SDK%2051-000020?logo=expo&logoColor=white)
+![React Native 0.74](https://img.shields.io/badge/React%20Native-0.74-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?logo=typescript&logoColor=white)
+![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
 
-## 🚀 Setup Rápido
+[🇧🇷 Português](#português) · [🇺🇸 English](#english)
 
-### 1. Pré-requisitos
-- Node.js 18+
-- Expo CLI: `npm install -g expo-cli`
-- Conta Supabase (https://app.supabase.com)
+<a id="português"></a>
 
-### 2. Instalação
+Aplicativo mobile para aproximar a comunidade da vida paroquial: horários de celebrações, liturgia diária, notícias, pedidos de oração e informações de dízimo em uma interface com cinco abas.
+
+**Status:** em desenvolvimento. A presença de telas e serviços no código não representa homologação em dispositivos ou disponibilidade em produção.
+
+## Demonstração
+
+O repositório ainda não inclui vídeo, screenshots ou endereço de demonstração. A avaliação local depende da configuração do Supabase e dos ajustes de ambiente descritos abaixo.
+
+## Funcionalidades
+
+| Módulo | Recursos presentes no código |
+| --- | --- |
+| Celebrações | Consulta de horários, filtros por dia e tipo, próxima celebração e suporte a lembretes locais |
+| Liturgia | Leitura por data, ajuste de fonte, cor litúrgica e cache local |
+| Notícias | Feed, categorias, busca, compartilhamento e serviços de interação |
+| Orações | Mural de intenções, formulário de pedido, opção de privacidade, apoio e vela virtual |
+| Dízimo | Informações paroquiais, cópia da chave, valores sugeridos e modal de QR Code |
+| Autenticação | Telas de login e cadastro com e-mail/senha, integração Supabase e persistência de sessão |
+
+Login, cadastro, modais e hooks já estão presentes. A versão anterior deste README os listava como pendentes.
+
+## Stack
+
+React 18.2 · React Native 0.74.5 · Expo SDK 51 · Expo Router 3.5 · TypeScript 5.3 · NativeWind 2 · Tailwind CSS 3 · Supabase JS 2 · AsyncStorage · Lucide React Native.
+
+As versões declaradas e os comandos estão em [package.json](package.json).
+
+## Arquitetura
+
+| Caminho | Responsabilidade |
+| --- | --- |
+| `app/(tabs)/` | Telas de celebrações, liturgia, notícias, orações e dízimo |
+| `app/(auth)/` | Login, cadastro e layout de autenticação |
+| `app/modals/` | Novo pedido de oração e visualização do QR Code |
+| `app/_layout.tsx` | Layout raiz e integração de navegação |
+| `src/components/` | Cards, leitor de liturgia, itens de oração e botão PIX |
+| `src/hooks/` | Estado e acesso aos fluxos de autenticação, missas, liturgia, notícias e orações |
+| `src/services/` | Operações de dados e funções dos módulos |
+| `src/lib/supabase.ts` | Cliente Supabase, persistência de sessão e cache |
+| `src/types/database.types.ts` | Tipos do banco |
+| `supabase-schema.sql` | Tabelas, políticas RLS, triggers e dados iniciais |
+
+As telas utilizam hooks e serviços para acessar o Supabase. O AsyncStorage mantém a sessão e caches de liturgia/notícias; isso não equivale a suporte offline completo.
+
+Consulte também [ARCHITECTURE.md](ARCHITECTURE.md), documento de referência que pode conter planos além da implementação atual.
+
+## Rodando localmente
+
+### Pré-requisitos
+
+- Node.js e npm compatíveis com as dependências do Expo SDK 51. O projeto não fixa uma versão de Node em `engines`.
+- Projeto Supabase para desenvolvimento.
+- Ambiente Android/iOS ou cliente de desenvolvimento compatível com o SDK utilizado.
+- Para simulador iOS, macOS e Xcode.
+
+### Instalação
+
 ```bash
+git clone https://github.com/renanfrontend/paroquia-app.git
 cd paroquia-app
 npm install
-# ou
-pnpm install
-```
-
-### 3. Configurar Variáveis de Ambiente
-```bash
 cp .env.example .env.local
-# Edite .env.local com suas credenciais Supabase
 ```
 
-### 4. Deploy do Schema no Supabase
-1. Vá para SQL Editor no dashboard Supabase
-2. Cole todo o conteúdo de `supabase-schema.sql` (fornecido no PRD)
-3. Execute o script
-4. Ative Row Level Security (RLS) nas tabelas
+No PowerShell, use `Copy-Item .env.example .env.local` para copiar o arquivo.
 
-### 5. Iniciar Dev Server
+### Ambiente
+
+Configure as variáveis consumidas pelo cliente em `.env.local`:
+
+```dotenv
+EXPO_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=sua-chave-publica-anon
+```
+
+A chave pública depende das permissões do banco. O exemplo também menciona `SUPABASE_SERVICE_ROLE_KEY`, mas ela não é necessária para o aplicativo: mantenha credenciais privilegiadas exclusivamente no ambiente servidor, fora do bundle mobile.
+
+### Banco de dados
+
+1. Em um projeto Supabase de desenvolvimento, execute [supabase-schema.sql](supabase-schema.sql) no SQL Editor.
+2. O script já habilita RLS e cria políticas; revise-as conforme os perfis de acesso desejados.
+3. Substitua os dados iniciais pelos dados da paróquia, incluindo horários e informações de dízimo.
+4. Configure o fluxo de confirmação de e-mail do Supabase Auth e valide cadastro/login.
+
+O SQL cria tipos e tabelas e não é uma migração idempotente: não o reaplique indiscriminadamente em um banco existente.
+
+### Desenvolvimento
+
 ```bash
 npm start
 ```
 
-- Android: Pressione `a`
-- iOS: Pressione `i`
-- Web: Pressione `w`
+Use os atalhos do Expo para o ambiente configurado. A CLI do Expo é fornecida pela dependência local; não é necessário instalar o antigo `expo-cli` global.
 
-## 📁 Estrutura de Arquivos
+## Comandos
 
-```
-app/
-├── (tabs)/              # Navegação com abas principais
-│   ├── _layout.tsx      # Tab bar com 5 abas
-│   ├── index.tsx        # Horários de Missas
-│   ├── liturgia.tsx     # Liturgia Diária
-│   ├── noticias.tsx     # Mural de Notícias
-│   ├── oracoes.tsx      # Pedidos de Oração
-│   └── dizimo.tsx       # PIX e Dízimo
-├── modals/              # [TODO] Modais
-│   ├── novo-pedido-oracao.tsx
-│   └── pix-qr-modal.tsx
-├── login.tsx            # [TODO] Autenticação
-├── register.tsx         # [TODO] Registro
-├── _layout.tsx          # Root layout + providers
-└── +not-found.tsx
+| Script | Finalidade |
+| --- | --- |
+| `npm start` | Iniciar o servidor Expo |
+| `npm run android` | Iniciar Expo para Android |
+| `npm run ios` | Iniciar Expo para iOS |
+| `npm run web` | Iniciar o alvo web; requer completar e validar a configuração web |
+| `npm run type-check` | Verificar tipos sem emitir arquivos |
+| `npm run lint` | Executar ESLint; a configuração não está versionada |
+| `npm run prebuild` | Gerar novamente os projetos nativos com `expo prebuild --clean`; pode substituir alterações nativas manuais |
+| `npm run build:android` | Solicitar build Android via EAS |
+| `npm run build:ios` | Solicitar build iOS via EAS |
 
-src/
-├── components/          # Componentes reutilizáveis
-│   ├── MassScheduleCard.tsx
-│   ├── PrayerItem.tsx
-│   ├── LiturgyReader.tsx
-│   ├── NewsCard.tsx
-│   └── PixCopyButton.tsx
-├── services/            # Data access layer (Supabase)
-│   ├── massService.ts
-│   ├── liturgyService.ts
-│   ├── prayerService.ts
-│   ├── newsService.ts
-│   └── pixService.ts
-├── lib/
-│   └── supabase.ts      # Cliente Supabase + cache offline
-├── types/
-│   └── database.types.ts # Types gerados do Supabase
-└── hooks/               # [TODO] Custom hooks
-    ├── useAuth.ts
-    ├── useLiturgy.ts
-    └── useMasses.ts
-```
+Os scripts EAS exigem CLI disponível, conta/projeto configurados e configuração de build. O repositório ainda não inclui `eas.json`.
 
-## 🎯 Funcionalidades Implementadas
+## Verificação e limites atuais
 
-✅ **Horários de Celebrações**
-- Listagem por dia da semana
-- Filtro por tipo (Missa, Confissão, Adoração, Terço, Novena)
-- Próxima missa em destaque
-- Lembrete com notificação local (30 min antes)
+Esta documentação foi conferida com os arquivos do repositório; não certifica execução, build ou integração com um Supabase real.
 
-✅ **Liturgia Diária**
-- Leitor interativo com zoom de fonte
-- Cache offline para leitura sem internet
-- Navegação por datas
-- Exibição de cor litúrgica do dia
+- Não há workflow de CI, suíte de testes ou lockfile versionados.
+- `app.json` referencia imagens em `assets/`, mas essa pasta não está presente na árvore atual.
+- A configuração de ESLint e os arquivos de configuração Babel/Metro não estão versionados; a integração de estilos e execução precisa ser validada.
+- O gerador de payload PIX está explicitamente simplificado em `src/services/pixService.ts`; o QR Code não deve ser apresentado como cobrança homologada. Não há confirmação bancária de pagamento.
+- A opção de oração privada existe na interface, mas o acesso de autor e responsáveis deve ser conferido nas políticas RLS. O schema não define um papel específico de padre.
+- Persistência de sessão utiliza AsyncStorage. Tipagem TypeScript não substitui autorização no banco.
+- Não há publicação em lojas ou deploy automatizado documentados no repositório.
 
-✅ **Mural de Notícias**
-- Feed com cards de notícias
-- Filtro por categoria (Aviso, Evento, Pastoral, Festa, Catequese)
-- Busca por palavras-chave
-- Sistema de likes
-- Compartilhamento no WhatsApp / Redes Sociais
+## Próximos passos
 
-✅ **Pedidos de Oração**
-- Mural de intenções públicas
-- Contador "Rezei por você" (interativo)
-- Acender vela virtual
-- Filtro por categoria e trending
-- Orações confidenciais (somente padre)
+- Completar os assets e a configuração de execução/build.
+- Validar tipos, lint e fluxos em dispositivos.
+- Revisar permissões por perfil e pedidos privados.
+- Substituir o gerador simplificado de PIX e validar o fluxo de contribuição.
+- Adicionar testes, CI e demonstração visual.
+- Avaliar tema escuro, paginação e autenticação social como evoluções futuras.
 
-✅ **Dízimo via PIX**
-- Exibição de QR Code PIX
-- Cópia da chave PIX (CNPJ / CPF)
-- Valores sugeridos (R$ 20, 50, 100, 200)
-- Informações paroquiais e contexto teológico
-- Mensagem de agradecimento personalizada
+## Autoria
 
-## 📋 Próximas Implementações
+Projeto mantido no GitHub de **Renan Augusto dos Santos**.
 
-### Modais [PENDING]
-1. **novo-pedido-oracao.tsx**
-   - Formulário com: Nome, Categoria, Intenção, Checkbox privado
-   - Validação e submit
-   - Loading state
-   - Sucesso/erro toast
+[Portfólio](https://renanaugusto.com.br) · [GitHub](https://github.com/renanfrontend)
 
-2. **pix-qr-modal.tsx**
-   - QR Code grande (usa lib `qrcode.react` ou similiar)
-   - Botão copiar chave
-   - Botão compartilhar no WhatsApp
+## Licença e direitos autorais
 
-### Telas de Autenticação [PENDING]
-1. **login.tsx**
-   - Email/senha
-   - Login com Google/Apple (via Supabase)
-   - Link "Criar Conta"
+O README anterior declara: **“Propriedade de Tupysa / Paróquia [Nome]. Uso interno.”**
 
-2. **register.tsx**
-   - Nome completo, email, senha
-   - Validação
-   - Termos de privacidade
-   - Sucesso + redirecionamento
-
-### Hooks Customizados [PENDING]
-```typescript
-useAuth() // Session, logout, user profile
-useLiturgy() // Auto-sincronização com cache
-useMasses() // Próxima missa + lembrete
-usePrayers() // Real-time listener
-useNews() // Cache + live updates
-```
-
-### Melhorias de UX [PENDING]
-- Skeleton loaders durante fetch
-- Infinite scroll / pagination
-- Pull-to-refresh completo
-- Modo escuro (dark mode)
-- Animações de transição
-- Toast notifications (Sonner ou similiar)
-
-## 🔐 Segurança & RLS
-
-Todas as queries passam por Row Level Security (RLS):
-
-```sql
--- Leitura pública (missas, liturgia, notícias públicas)
--- Escrita: apenas admins e líderes pastorais
--- Orações privadas: somente padre + autor
-```
-
-**Princípio:** A tipagem forte do TypeScript + RLS no Supabase = segurança em duas camadas.
-
-## 🎨 Design System
-
-**Cores Primárias:**
-- Vermelho: `#dc2626` (ação, destaque paroquial)
-- Cinzas neutros: `#1f2937` → `#f3f4f6`
-- Sucesso: `#10b981`
-- Aviso: `#f59e0b`
-- Erro: `#dc2626`
-
-**Tipografia:**
-- Headlines: System font bold
-- Body: System sans-serif
-- Monospace: Para chaves PIX
-
-**Componentes:**
-- Cards com shadow suave
-- Botões com active states claros
-- Ícones via lucide-react-native
-
-## 📱 Build & Deploy
-
-### EAS Build (Recomendado)
-```bash
-# Android
-npm run build:android
-
-# iOS
-npm run build:ios
-```
-
-### Deploy Manual
-```bash
-# Prebuild nativo (se necessário)
-npm run prebuild
-
-# Compilar com Xcode (iOS) / Android Studio
-```
-
-## 🐛 Troubleshooting
-
-**"Cannot find module '@/lib/supabase'"**
-- Limpar cache: `rm -rf node_modules/.cache`
-- Reinstalar: `npm install`
-
-**Notificações não funcionam**
-- Verificar `eas.json` config
-- Testar com `expo-notifications` diretamente
-
-**RLS causando erros 403**
-- Verificar se o usuário tem permissão na policy
-- Logar com usuário com role `ADMIN_PARISH` ou `PASTORAL_LEADER`
-
-## 📚 Recursos
-
-- [Expo Router Docs](https://docs.expo.dev/router/introduction/)
-- [Supabase Auth Docs](https://supabase.com/docs/guides/auth)
-- [NativeWind (Tailwind para React Native)](https://www.nativewind.dev/)
-- [Lucide Icons](https://lucide.dev/)
-
-## 📄 Licença
-
-Propriedade de Tupysa / Paróquia [Nome]. Uso interno.
+Essa indicação foi preservada; o repositório não contém arquivo `LICENSE`. A identificação definitiva do titular e da paróquia permanece pendente. Esta padronização documental não altera os termos de uso existentes. Dependências de terceiros mantêm suas respectivas licenças.
 
 ---
 
-**Arquiteto:** Senior Frontend Engineer
-**Stack:** React Native, Expo Router v3, TypeScript, Supabase, Tailwind/NativeWind
-**Status:** Beta 1.0 (Em Desenvolvimento)
+<a id="english"></a>
+
+## 🇺🇸 English
+
+**Paróquia Conectada** is a parish community mobile app built with React Native, Expo Router, TypeScript and Supabase. Its source includes celebration schedules, daily liturgy, news, prayer requests, tithe information, and email/password authentication.
+
+### Architecture and setup
+
+Routes live in `app/`; reusable UI, hooks, services and database types live in `src/`. Supabase handles data and authentication, while AsyncStorage persists sessions and selected cached content.
+
+Clone the repository, run `npm install`, copy `.env.example` to `.env.local`, and set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`. Apply `supabase-schema.sql` to a development Supabase project, review its access policies and replace seed data. The SQL is not an idempotent migration. Keep service-role credentials server-side.
+
+Run `npm start` with an environment compatible with Expo SDK 51. Available scripts are listed above; `npm run type-check` and `npm run lint` are the declared static checks.
+
+### Current status
+
+This is a work in progress, not a verified production release. Referenced image assets, ESLint configuration and EAS build configuration are missing from the current repository. No automated tests, CI workflow, lockfile or public demo are included. Runtime, builds and live backend integration were not validated during this documentation update.
+
+The PIX payload generator is a simplified implementation, not a validated payment flow. Private prayer access requires policy review. Local caches do not provide full offline support.
+
+Maintained in **Renan Augusto dos Santos**' GitHub account. The previous ownership notice (“Propriedade de Tupysa / Paróquia [Nome]. Uso interno.”) remains unchanged; no standalone license file is included.
