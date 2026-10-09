@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { buildPixPayload } from '@/lib/pix'
 import { Database } from '@/types/database.types'
 
 type TitheInfo = Database['public']['Tables']['tithe_info']['Row']
@@ -23,24 +24,24 @@ export const pixService = {
   },
 
   /**
-   * Gerar QR Code PIX (geralmente usando uma lib como qrcode)
-   * Retorna a string que deve ser codificada em QR
+   * Código PIX "copia e cola" no padrão BR Code do Banco Central (src/lib/pix.ts).
+   * O mesmo texto vai no QR Code. Sem valor, quem contribui digita o valor no app do banco.
+   * Devolve string vazia se os dados da paróquia estiverem incompletos.
    */
-  generatePixQrCodeString(pixKey: string, amount?: number): string {
-    /**
-     * Format EMV (BR Code) para PIX estático/dinâmico
-     * Simplificado - em produção usar uma lib como brcode
-     */
-    if (!amount) {
-      // PIX estático (sem valor definido)
-      return pixKey
+  generatePixQrCodeString(info: Pick<TitheInfo, 'pix_key' | 'pix_key_type' | 'parish_name' | 'city'>, amount?: number): string {
+    try {
+      return buildPixPayload({
+        key: info.pix_key,
+        keyType: info.pix_key_type,
+        merchantName: info.parish_name,
+        merchantCity: info.city,
+        amount,
+        description: 'Dizimo',
+      })
+    } catch (error) {
+      console.error('Dados de PIX inválidos:', error)
+      return ''
     }
-
-    /**
-     * Formato simplificado para PIX com valor
-     * Em produção: usar API official do Bacen ou lib como 'brcode'
-     */
-    return `00020126580014br.gov.bcb.pix0136${pixKey}520400005303986540${amount}5802BR5913PAROQUIA6009SAO PAULO62230503***63047D3D`
   },
 
   /**

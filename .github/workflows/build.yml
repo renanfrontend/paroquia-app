@@ -2,6 +2,8 @@ name: Web e APK Android
 on:
   push:
     branches: [main]
+  # Nos PRs roda tudo menos a publicação do site, para pegar erros antes do merge.
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
@@ -9,6 +11,15 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22 roda os testes em TypeScript sem compilar (--experimental-strip-types).
+          node-version: 22
+      - run: npm test
   web:
     runs-on: ubuntu-latest
     env:
@@ -35,7 +46,8 @@ jobs:
         with:
           path: dist
   deploy:
-    needs: web
+    needs: [test, web]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       pages: write

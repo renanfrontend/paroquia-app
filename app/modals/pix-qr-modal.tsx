@@ -47,10 +47,7 @@ export default function PixQrModal() {
    */
   const pixPayload = useMemo(() => {
     if (!titheInfo) return ''
-    return pixService.generatePixQrCodeString(
-      titheInfo.pix_key,
-      selectedAmount ?? undefined,
-    )
+    return pixService.generatePixQrCodeString(titheInfo, selectedAmount ?? undefined)
   }, [titheInfo, selectedAmount])
 
   const handleCopyPayload = async () => {
@@ -132,12 +129,19 @@ export default function PixQrModal() {
         {/* QR Code */}
         <View className="items-center mb-6">
           <View className="bg-white p-6 rounded-2xl border-2 border-gray-200 shadow-sm">
-            <QRCode
-              value={pixPayload}
-              size={220}
-              backgroundColor="#ffffff"
-              color="#111827"
-            />
+            {pixPayload ? (
+              <QRCode
+                value={pixPayload}
+                size={220}
+                backgroundColor="#ffffff"
+                color="#111827"
+              />
+            ) : (
+              // Dados da paróquia incompletos (chave, nome ou cidade): melhor não gerar um QR inválido.
+              <Text className="w-[220px] text-center text-gray-700">
+                Os dados de PIX da paróquia estão incompletos. Contate a secretaria paroquial.
+              </Text>
+            )}
           </View>
           <Text className="text-xs text-gray-500 mt-3 text-center px-8">
             Abra o app do seu banco, escolha "Pagar com PIX" e aponte a câmera

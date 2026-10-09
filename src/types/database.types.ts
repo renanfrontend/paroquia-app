@@ -244,6 +244,7 @@ export interface Database {
           cnpj: string
           pix_key: string
           pix_key_type: string
+          city: string
           bank_name: string | null
           account_info: string | null
           custom_message: string
@@ -256,6 +257,7 @@ export interface Database {
           cnpj: string
           pix_key: string
           pix_key_type?: string
+          city?: string
           bank_name?: string | null
           account_info?: string | null
           custom_message?: string
@@ -268,6 +270,7 @@ export interface Database {
           cnpj?: string
           pix_key?: string
           pix_key_type?: string
+          city?: string
           bank_name?: string | null
           account_info?: string | null
           custom_message?: string
