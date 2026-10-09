@@ -31,7 +31,7 @@ Não há vídeo de demonstração versionado.
 | Liturgia | Leitura por data, ajuste de fonte, cor litúrgica e cache local |
 | Notícias | Feed, categorias, busca, compartilhamento e serviços de interação |
 | Orações | Mural de intenções, formulário de pedido, opção de privacidade, apoio e vela virtual |
-| Dízimo | Informações paroquiais, cópia da chave, valores sugeridos e modal de QR Code |
+| Dízimo | Informações paroquiais, cópia da chave, valores sugeridos e QR Code PIX no padrão BR Code do Banco Central (com e sem valor) |
 | Autenticação | Telas de login e cadastro com e-mail/senha, integração Supabase e persistência de sessão |
 
 Login, cadastro, modais e hooks já estão presentes. A versão anterior deste README os listava como pendentes.
@@ -96,7 +96,7 @@ A chave pública depende das permissões do banco. O exemplo também menciona `S
 
 1. Em um projeto Supabase de desenvolvimento, execute [supabase-schema.sql](supabase-schema.sql) no SQL Editor.
 2. O script já habilita RLS e cria políticas; revise-as conforme os perfis de acesso desejados.
-3. Substitua os dados iniciais pelos dados da paróquia, incluindo horários e informações de dízimo.
+3. Substitua os dados iniciais pelos dados da paróquia, incluindo horários e informações de dízimo. Em `tithe_info`, `pix_key_type` aceita `CNPJ`, `CPF`, `EMAIL`, `TELEFONE` ou `ALEATORIA`, e `city` é a cidade que aparece no PIX.
 4. Configure o fluxo de confirmação de e-mail do Supabase Auth e valide cadastro/login.
 
 O SQL cria tipos e tabelas e não é uma migração idempotente: não o reaplique indiscriminadamente em um banco existente.
@@ -117,6 +117,7 @@ Use os atalhos do Expo para o ambiente configurado. A CLI do Expo é fornecida p
 | `npm run android` | Iniciar Expo para Android |
 | `npm run ios` | Iniciar Expo para iOS |
 | `npm run web` | Iniciar o servidor web |
+| `npm test` | Testes do gerador de PIX (Node 22.6 ou superior) |
 | `npm run type-check` | Verificar tipos sem emitir arquivos |
 | `npm run lint` | Executar ESLint com a configuração versionada |
 | `npm run build:web` | Exportar a versão web para `dist/` |
@@ -131,10 +132,10 @@ Os scripts EAS exigem CLI disponível, conta/projeto configurados e configuraç�
 
 Esta documentação foi conferida com os arquivos do repositório; não certifica execução, build ou integração com um Supabase real.
 
-- O workflow executa TypeScript, ESLint, exportação web e build Android. O lockfile está versionado; ainda não há suíte de testes de integração.
+- O workflow executa testes, TypeScript, ESLint, exportação web e build Android em cada PR e na `main` (a publicação do site só acontece na `main`). Há testes do gerador de PIX; ainda não há testes de integração com o Supabase.
 - Ícones do aplicativo e de notificações estão em `assets/`.
 - Babel, Metro, NativeWind, PostCSS e ESLint estão configurados; a validação em dispositivo físico permanece necessária.
-- O gerador de payload PIX está explicitamente simplificado em `src/services/pixService.ts`; o QR Code não deve ser apresentado como cobrança homologada. Não há confirmação bancária de pagamento.
+- O QR Code PIX segue o padrão BR Code do Banco Central (`src/lib/pix.ts`): campos com tamanho calculado, CRC16 e chave normalizada pelo tipo, conferidos contra o exemplo oficial do manual do Pix em `tests/pix.test.mjs`. É um QR estático (sem confirmação automática de pagamento); a leitura por apps de banco reais ainda deve ser validada com a chave da paróquia.
 - A opção de oração privada existe na interface, mas o acesso de autor e responsáveis deve ser conferido nas políticas RLS. O schema não define um papel específico de padre.
 - Persistência de sessão utiliza AsyncStorage. Tipagem TypeScript não substitui autorização no banco.
 - O deploy web depende da habilitação do GitHub Pages. O APK de teste não equivale a publicação em loja. Build concluído não certifica login, permissões ou pagamentos com backend real.
@@ -144,7 +145,7 @@ Esta documentação foi conferida com os arquivos do repositório; não certific
 - Configurar e homologar o Supabase da paróquia.
 - Validar tipos, lint e fluxos em dispositivos.
 - Revisar permissões por perfil e pedidos privados.
-- Substituir o gerador simplificado de PIX e validar o fluxo de contribuição.
+- Validar o QR Code PIX com a chave real da paróquia em apps de bancos diferentes.
 - Adicionar testes de integração e demonstração visual.
 - Avaliar tema escuro, paginação e autenticação social como evoluções futuras.
 
@@ -180,6 +181,6 @@ Run `npm start` with an environment compatible with Expo SDK 51. Available scrip
 
 This is a work in progress, not a verified production release. The repository includes image assets, ESLint/Babel/Metro configuration, an npm lockfile, an EAS APK profile and a GitHub Actions workflow for web deployment and standalone Android test APKs. Enable GitHub Pages with GitHub Actions as the source. Download the Android artifact after a successful build; it uses a development signing key, not a production store identity. Configure the Supabase URL repository variable and public anon key secret before rebuilding to enable live features. Without them, the app displays a setup-pending screen. Physical-device and live-backend validation remain required.
 
-The PIX payload generator is a simplified implementation, not a validated payment flow. Private prayer access requires policy review. Local caches do not provide full offline support.
+PIX QR codes follow the Central Bank BR Code standard (computed field lengths and CRC16), checked against the official example from the Pix manual; they are static codes with no automatic payment confirmation. Private prayer access requires policy review. Local caches do not provide full offline support.
 
 Maintained in **Renan Augusto dos Santos**' GitHub account. The previous ownership notice (“Propriedade de Tupysa / Paróquia [Nome]. Uso interno.”) remains unchanged; no standalone license file is included.

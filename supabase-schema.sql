@@ -134,7 +134,10 @@ CREATE TABLE public.tithe_info (
   parish_name TEXT NOT NULL DEFAULT 'Paróquia Nossa Senhora das Graças',
   cnpj TEXT NOT NULL,
   pix_key TEXT NOT NULL,
-  pix_key_type TEXT NOT NULL DEFAULT 'CNPJ',
+  pix_key_type TEXT NOT NULL DEFAULT 'CNPJ'
+    CHECK (pix_key_type IN ('CNPJ', 'CPF', 'EMAIL', 'TELEFONE', 'ALEATORIA')),
+  -- Cidade do recebedor: obrigatória no QR Code PIX (até 15 caracteres, sem acentos no código).
+  city TEXT NOT NULL DEFAULT 'São Paulo',
   bank_name TEXT DEFAULT 'Banco do Brasil',
   account_info TEXT,
   custom_message TEXT DEFAULT 'O dízimo é um ato de fé, amor e gratidão a Deus.',
@@ -281,12 +284,13 @@ CREATE TRIGGER update_tithe_info_updated_at BEFORE UPDATE ON public.tithe_info
 -- ==============================================================================
 
 -- Inserir uma paróquia exemplo
-INSERT INTO public.tithe_info (parish_name, cnpj, pix_key, pix_key_type, bank_name, custom_message)
+INSERT INTO public.tithe_info (parish_name, cnpj, pix_key, pix_key_type, city, bank_name, custom_message)
 VALUES (
   'Paróquia Nossa Senhora das Graças',
   '12.345.678/0001-90',
   '123e4567-e89b-12d3-a456-426614174000',
-  'CNPJ',
+  'ALEATORIA',
+  'São Paulo',
   'Banco do Brasil',
   'O dízimo é um ato de fé, amor e coresponsabilidade com Deus e nossa comunidade paroquial.'
 );
