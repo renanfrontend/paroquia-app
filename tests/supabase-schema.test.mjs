@@ -23,12 +23,8 @@ await db.exec(`
 `);
 
 await db.exec(readFileSync(schemaPath, "utf8"));
-// Supabase concede acesso às tabelas e o RLS decide o resto.
-await db.exec(`
-  GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
-  GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
-  GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated;
-`);
+// Sem GRANT extra: as permissões das tabelas vêm do próprio supabase-schema.sql,
+// como num projeto novo do Supabase que não concede acesso por padrão.
 
 const A = "11111111-1111-1111-1111-111111111111";
 const B = "22222222-2222-2222-2222-222222222222";

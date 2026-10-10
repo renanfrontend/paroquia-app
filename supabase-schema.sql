@@ -148,6 +148,11 @@ CREATE TABLE public.tithe_info (
 -- ==============================================================================
 -- 8. ROW LEVEL SECURITY (RLS POLICIES)
 -- ==============================================================================
+-- Acesso das chaves do app (anon/authenticated) às tabelas. Projetos novos do Supabase podem vir sem
+-- essas permissões; quem decide o que cada pessoa vê e altera são as políticas (RLS) abaixo.
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mass_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_liturgy ENABLE ROW LEVEL SECURITY;
