@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, Linking } from 'react-native'
-import { ZoomIn, ZoomOut, ExternalLink } from 'lucide-react-native'
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
+import { ZoomIn, ZoomOut, BookOpen } from 'lucide-react-native'
+import { openInApp } from '@/lib/openInApp'
 import { Database } from '@/types/database.types'
 
 interface LiturgyReaderProps {
@@ -211,14 +212,14 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
           </View>
         )}
 
-        {/* Leituras completas na fonte (o app guarda só as referências) */}
+        {/* Leituras completas dentro do app, vindas da fonte (o app guarda só as referências) */}
         {liturgy.source_url && (
           <TouchableOpacity
-            onPress={() => Linking.openURL(liturgy.source_url as string)}
+            onPress={() => openInApp(liturgy.source_url as string)}
             className="mb-6 flex-row items-center justify-center gap-2 rounded-lg border border-gray-300 p-3 active:bg-gray-100"
             accessibilityRole="link"
           >
-            <ExternalLink size={18} color="#374151" />
+            <BookOpen size={18} color="#374151" />
             <Text className="font-semibold text-gray-800">Ler as leituras completas</Text>
           </TouchableOpacity>
         )}

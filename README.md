@@ -28,8 +28,8 @@ Não há vídeo de demonstração versionado.
 | Módulo | Recursos presentes no código |
 | --- | --- |
 | Celebrações | Consulta de horários, filtros por dia e tipo, próxima celebração e suporte a lembretes locais |
-| Liturgia | Atualizada sozinha todo dia: cor litúrgica, tempo do ano e referências das leituras, com botão para ler o texto completo na fonte; ajuste de fonte e cache local |
-| Notícias | Avisos da paróquia em tempo real (categorias, busca, curtir e compartilhar) e aba "Da Igreja" com manchetes do Vatican News e da CNBB, atualizadas sozinhas |
+| Liturgia | Atualizada sozinha todo dia: cor litúrgica, tempo do ano e referências das leituras, com o texto completo aberto dentro do app, direto da fonte; ajuste de fonte e cache local |
+| Notícias | Avisos da paróquia em tempo real (categorias, busca, curtir e compartilhar) e aba "Da Igreja" com manchetes do Vatican News e da CNBB, atualizadas sozinhas e abertas dentro do app |
 | Orações | Mural de intenções, formulário de pedido, opção de privacidade, apoio e vela virtual |
 | Dízimo | Informações paroquiais, cópia da chave, valores sugeridos e QR Code PIX no padrão BR Code do Banco Central (com e sem valor) |
 | Autenticação | Telas de login e cadastro com e-mail/senha, integração Supabase e persistência de sessão |
