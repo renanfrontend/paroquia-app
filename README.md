@@ -28,8 +28,8 @@ Não há vídeo de demonstração versionado.
 | Módulo | Recursos presentes no código |
 | --- | --- |
 | Celebrações | Consulta de horários, filtros por dia e tipo, próxima celebração e suporte a lembretes locais |
-| Liturgia | Leitura por data, ajuste de fonte, cor litúrgica e cache local |
-| Notícias | Feed, categorias, busca, compartilhamento e serviços de interação |
+| Liturgia | Atualizada sozinha todo dia: cor litúrgica, tempo do ano e referências das leituras, com botão para ler o texto completo na fonte; ajuste de fonte e cache local |
+| Notícias | Avisos da paróquia em tempo real (categorias, busca, curtir e compartilhar) e aba "Da Igreja" com manchetes do Vatican News e da CNBB, atualizadas sozinhas |
 | Orações | Mural de intenções, formulário de pedido, opção de privacidade, apoio e vela virtual |
 | Dízimo | Informações paroquiais, cópia da chave, valores sugeridos e QR Code PIX no padrão BR Code do Banco Central (com e sem valor) |
 | Autenticação | Telas de login e cadastro com e-mail/senha, integração Supabase e persistência de sessão |
@@ -109,6 +109,22 @@ npm start
 ```
 
 Use os atalhos do Expo para o ambiente configurado. A CLI do Expo é fornecida pela dependência local; não é necessário instalar o antigo `expo-cli` global.
+
+## Liturgia e notícias automáticas
+
+O robô [`scripts/update-content.mjs`](scripts/update-content.mjs) roda de hora em hora no GitHub Actions ([Liturgia e notícias](.github/workflows/conteudo.yml)):
+
+- **Liturgia:** lê o resumo da Liturgia Diária da Canção Nova e grava em `daily_liturgy` só os dados do dia (cor, título e referências das leituras) e o link para as leituras completas. O texto das leituras não é copiado, porque tem direitos autorais. Cadastros feitos à mão (texto, reflexão) são mantidos.
+- **Notícias da Igreja:** lê os feeds do Vatican News (português) e da CNBB e grava as manchetes em `church_news`, com link para a matéria original. Manchetes com mais de 45 dias são apagadas.
+- **Tempo real:** avisos da paróquia e manchetes novas aparecem no app sem recarregar (Supabase Realtime).
+
+Para ligar:
+
+1. Num banco criado antes de 10/10/2026, rode [`supabase/migrations/20261010_conteudo_automatico.sql`](supabase/migrations/20261010_conteudo_automatico.sql) no SQL Editor. Bancos novos já recebem isso pelo `supabase-schema.sql`.
+2. Crie o segredo de Actions `SUPABASE_SERVICE_ROLE_KEY` com a chave **secret/service_role** do Supabase (Project Settings → API Keys). Essa chave ignora as regras de segurança: fica só no GitHub, nunca no app nem no código.
+3. Rode o workflow **Liturgia e notícias** uma vez à mão (Actions → Run workflow) para conferir.
+
+Se uma fonte mudar o formato da página, o robô não grava dados errados: a execução falha com a mensagem "Formato da página de liturgia mudou" e o resto continua funcionando.
 
 ## Comandos
 

@@ -93,9 +93,10 @@ export interface Database {
           second_reading_ref: string | null
           second_reading_text: string | null
           gospel_ref: string
-          gospel_text: string
+          gospel_text: string | null
           reflection: string | null
           audio_url: string | null
+          source_url: string | null
           created_at: string
         }
         Insert: {
@@ -111,9 +112,10 @@ export interface Database {
           second_reading_ref?: string | null
           second_reading_text?: string | null
           gospel_ref: string
-          gospel_text: string
+          gospel_text?: string | null
           reflection?: string | null
           audio_url?: string | null
+          source_url?: string | null
           created_at?: string
         }
         Update: {
@@ -129,9 +131,42 @@ export interface Database {
           second_reading_ref?: string | null
           second_reading_text?: string | null
           gospel_ref?: string
-          gospel_text?: string
+          gospel_text?: string | null
           reflection?: string | null
           audio_url?: string | null
+          source_url?: string | null
+          created_at?: string
+        }
+      }
+      church_news: {
+        Row: {
+          id: string
+          source: string
+          title: string
+          summary: string | null
+          link: string
+          image_url: string | null
+          published_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          source: string
+          title: string
+          summary?: string | null
+          link: string
+          image_url?: string | null
+          published_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          source?: string
+          title?: string
+          summary?: string | null
+          link?: string
+          image_url?: string | null
+          published_at?: string
           created_at?: string
         }
       }

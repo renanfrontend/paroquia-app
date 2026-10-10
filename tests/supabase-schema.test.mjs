@@ -148,6 +148,18 @@ check("admin altera os dados do dízimo", !r.error && r.affected === 1, r.error)
 r = await as(ADM, "UPDATE public.tithe_info SET pix_key_type='BOLETO'");
 check("tipo de chave PIX inválido é recusado", Boolean(r.error));
 
+// 6. Conteúdo automático (gravado pelo robô com a service_role, que ignora o RLS)
+await db.exec(`INSERT INTO public.church_news (source, title, link, published_at)
+  VALUES ('CNBB', 'Manchete', 'https://www.cnbb.org.br/exemplo', NOW());
+  INSERT INTO public.daily_liturgy (date, title, gospel_ref, source_url, liturgical_color)
+  VALUES (CURRENT_DATE + 1, 'Teste', 'Lc 11,27-28', 'https://liturgia.cancaonova.com/pb/', 'VERDE');`);
+r = await as(null, "SELECT count(*)::int AS n FROM public.church_news");
+check("anônimo lê as notícias da Igreja", !r.error && r.rows[0].n === 1, r.error);
+r = await as(A, "INSERT INTO public.church_news (source, title, link, published_at) VALUES ('CNBB', 'x', 'https://x.y', NOW())");
+check("o app não grava notícias da Igreja", Boolean(r.error));
+r = await as(null, "SELECT gospel_text, source_url FROM public.daily_liturgy WHERE date = CURRENT_DATE + 1");
+check("liturgia só com referências e link da fonte", !r.error && r.rows[0]?.gospel_text === null && Boolean(r.rows[0]?.source_url), r.error);
+
 await db.close();
 assert.equal(failures, 0, `${failures} verificação(ões) de segurança falharam (veja as linhas ERRO acima)`);
 });
