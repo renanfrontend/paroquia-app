@@ -1,20 +1,21 @@
-import { View, Text, TouchableOpacity, Image, Linking } from 'react-native'
-import { ExternalLink } from 'lucide-react-native'
+import { View, Text, TouchableOpacity, Image } from 'react-native'
+import { BookOpen } from 'lucide-react-native'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { CHURCH_NEWS_SOURCES, type ChurchNews } from '@/services/churchNewsService'
+import { openInApp } from '@/lib/openInApp'
 
-/** Manchete da Igreja: abre a matéria completa no site da fonte. */
+/** Manchete da Igreja: abre a matéria completa dentro do app (site da fonte, sem copiar o texto). */
 export function ChurchNewsCard({ news }: { news: ChurchNews }) {
   const source = CHURCH_NEWS_SOURCES[news.source] ?? news.source
   const timeAgo = formatDistanceToNow(new Date(news.published_at), { addSuffix: true, locale: ptBR })
 
   return (
     <TouchableOpacity
-      onPress={() => Linking.openURL(news.link)}
+      onPress={() => openInApp(news.link)}
       className="mb-3 overflow-hidden rounded-xl bg-white shadow-sm active:opacity-80"
       accessibilityRole="link"
-      accessibilityLabel={`${news.title}. ${source}. Abrir matéria completa`}
+      accessibilityLabel={`${news.title}. ${source}. Ler a matéria completa`}
     >
       {news.image_url && (
         <Image source={{ uri: news.image_url }} className="h-40 w-full" resizeMode="cover" />
@@ -33,8 +34,8 @@ export function ChurchNewsCard({ news }: { news: ChurchNews }) {
           </Text>
         )}
         <View className="flex-row items-center gap-1">
-          <ExternalLink size={14} color="#dc2626" />
-          <Text className="text-sm font-semibold text-red-600">Ler no site de {source}</Text>
+          <BookOpen size={14} color="#dc2626" />
+          <Text className="text-sm font-semibold text-red-600">Ler a matéria completa</Text>
         </View>
       </View>
     </TouchableOpacity>
