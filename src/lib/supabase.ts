@@ -2,9 +2,11 @@ import 'react-native-url-polyfill/auto'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient, SupabaseClient as SupabaseClientType } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
+import publicConfig from '@/config/supabase.public.json'
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || publicConfig.url
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || publicConfig.publishableKey
 
 export const isSupabaseConfigured = Boolean(
   SUPABASE_URL && /^https?:\/\//.test(SUPABASE_URL) &&
@@ -13,7 +15,7 @@ export const isSupabaseConfigured = Boolean(
 
 /**
  * Adapter customizado para persistir sessão de autenticação
- * Supabase + React Native usando AsyncStorage + SecureStore
+ * Supabase + React Native usando AsyncStorage
  */
 class SupabaseSessionAdapter {
   async getItem(key: string): Promise<string | null> {

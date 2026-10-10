@@ -55,28 +55,19 @@ export function useAuth(): UseAuthReturn {
 
       setSession(initialSession)
 
-      if (initialSession?.user) {
-        const profileData = await fetchProfile(initialSession.user.id)
-        if (isMounted) setProfile(profileData)
-      }
-
       if (isMounted) setIsLoading(false)
     }
 
-    init()
+    init().catch((error) => {
+      console.error('Error restoring session:', error)
+      if (isMounted) setIsLoading(false)
+    })
 
     const { data } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
+      (_event, newSession) => {
         if (!isMounted) return
-
+        // Nunca aguardar chamadas Supabase no callback: ele mantém o lock do Auth.
         setSession(newSession)
-
-        if (newSession?.user) {
-          const profileData = await fetchProfile(newSession.user.id)
-          if (isMounted) setProfile(profileData)
-        } else {
-          setProfile(null)
-        }
       },
     )
 
@@ -85,6 +76,18 @@ export function useAuth(): UseAuthReturn {
       data.subscription.unsubscribe()
     }
   }, [fetchProfile])
+
+  const userId = session?.user.id
+  useEffect(() => {
+    let cancelled = false
+    setProfile(null)
+    if (userId) {
+      fetchProfile(userId).then((data) => {
+        if (!cancelled) setProfile(data)
+      }).catch((error) => console.error('Error loading profile:', error))
+    }
+    return () => { cancelled = true }
+  }, [userId, fetchProfile])
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()

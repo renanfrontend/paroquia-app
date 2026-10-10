@@ -23,8 +23,8 @@ await db.exec(`
 `);
 
 await db.exec(readFileSync(schemaPath, "utf8"));
-// Sem GRANT extra: as permissões das tabelas vêm do próprio supabase-schema.sql,
-// como num projeto novo do Supabase que não concede acesso por padrão.
+// Os grants usados no teste são os mesmos do banco de produção.
+await db.exec(readFileSync(new URL("./fixtures/parish-demo.sql", import.meta.url), "utf8"));
 
 const A = "11111111-1111-1111-1111-111111111111";
 const B = "22222222-2222-2222-2222-222222222222";
@@ -83,8 +83,8 @@ r = await as(null, `INSERT INTO public.prayer_requests (user_id, author_name, in
 check("anônimo não cria pedido em nome de outra pessoa", Boolean(r.error));
 r = await as(null, `INSERT INTO public.prayer_requests (author_name, intention, prayers_count) VALUES ('X', 'teste', 999) RETURNING id`);
 check("não dá para criar pedido com contador inflado", Boolean(r.error));
-r = await as(null, `INSERT INTO public.prayer_requests (author_name, intention) VALUES ('Maria', 'Pela saúde da minha mãe') RETURNING id`);
-check("anônimo cria pedido sem conta", !r.error && r.rows.length === 1, r.error);
+r = await as(A, `INSERT INTO public.prayer_requests (user_id, author_name, intention) VALUES ('${A}', 'Maria', 'Pela saúde da minha mãe') RETURNING id`);
+check("membro cria pedido próprio", !r.error && r.rows.length === 1, r.error);
 const publicPrayer = r.rows?.[0]?.id;
 r = await as(B, `INSERT INTO public.prayer_requests (user_id, author_name, intention, is_private) VALUES ('${B}', 'Bruno', 'Intenção privada', true) RETURNING id`);
 check("logado cria pedido privado", !r.error, r.error);
@@ -96,7 +96,7 @@ check("autor vê o próprio pedido privado", !r.error && r.rows.length === 1);
 r = await as(ADM, `SELECT id FROM public.prayer_requests WHERE id='${privatePrayer}'`);
 check("admin vê pedido privado (moderação)", !r.error && r.rows.length === 1);
 r = await as(null, `UPDATE public.prayer_requests SET intention='alterado', is_private=false WHERE id='${publicPrayer}'`);
-check("anônimo não altera pedido", !r.error && r.affected === 0, r.error);
+check("anônimo não altera pedido", Boolean(r.error));
 r = await as(A, `UPDATE public.prayer_requests SET is_private=false WHERE id='${privatePrayer}'`);
 check("ninguém torna público o pedido privado de outro", !r.error && r.affected === 0, r.error);
 r = await as(null, `INSERT INTO public.prayer_requests (author_name, intention) VALUES ('X', repeat('a', 1001))`);
@@ -108,20 +108,33 @@ check("'rezei por você' soma 1", !r.error && r.rows[0].n === 1, r.error);
 r = await as(A, "SELECT public.increment_prayer_support($1) AS n", [publicPrayer]);
 check("a mesma pessoa não soma duas vezes", !r.error && r.rows[0].n === 1, r.error);
 r = await as(null, "SELECT public.increment_prayer_support($1) AS n", [publicPrayer]);
-check("anônimo também intercede", !r.error && r.rows[0].n === 2, r.error);
+check("anônimo não intercede", Boolean(r.error));
+r = await as(B, "SELECT public.increment_prayer_support($1) AS n", [publicPrayer]);
+check("outro membro intercede", !r.error && r.rows[0].n === 2, r.error);
+r = await as(A, "SELECT user_id FROM public.prayer_supports");
+check("intercessões de outras pessoas são privadas", !r.error && r.rows.length === 1 && r.rows[0].user_id === A);
+r = await as(null, "SELECT public.light_candle($1)", [publicPrayer]);
+check("anônimo não acende vela", Boolean(r.error));
 r = await as(A, "SELECT public.increment_prayer_support($1) AS n", [privatePrayer]);
 check("não intercede em pedido privado alheio", Boolean(r.error));
-r = await as(null, "SELECT public.light_candle($1) AS n", [publicPrayer]);
+r = await as(A, "SELECT public.light_candle($1) AS n", [publicPrayer]);
 check("acender vela soma 1", !r.error && r.rows[0].n === 1, r.error);
 r = await as(A, "SELECT public.light_candle($1) AS n", [privatePrayer]);
 check("não acende vela em pedido privado alheio", Boolean(r.error));
 r = await as(null, `INSERT INTO public.prayer_supports (prayer_id) VALUES ('${publicPrayer}')`);
 check("intercessão direta na tabela é bloqueada (só pela função)", Boolean(r.error));
 
+r = await as(null, "SELECT public.like_news(gen_random_uuid())");
+check("anônimo não curte notícia", Boolean(r.error));
+r = await as(A, `INSERT INTO public.prayer_requests (user_id, author_name, intention, prayers_count) VALUES ('${A}', 'A', 'Teste', 999)`);
+check("membro não infla contador ao criar pedido", Boolean(r.error));
+r = await as(A, `INSERT INTO public.prayer_requests (user_id, author_name, intention) VALUES ('${B}', 'B', 'Teste')`);
+check("membro não se passa por outro autor", Boolean(r.error));
+
 // 5. Notícias e dízimo
 const news = (await db.query("SELECT id FROM public.news_posts LIMIT 1")).rows[0].id;
-r = await as(null, "SELECT public.like_news($1) AS n", [news]);
-check("curtir notícia funciona para qualquer pessoa", !r.error && r.rows[0].n === 1, r.error);
+r = await as(A, "SELECT public.like_news($1) AS n", [news]);
+check("membro curte notícia", !r.error && r.rows[0].n === 1, r.error);
 r = await as(A, `UPDATE public.news_posts SET title='hack' WHERE id='${news}'`);
 check("membro não edita notícia", !r.error && r.affected === 0, r.error);
 r = await as(B, `UPDATE public.news_posts SET is_pinned=false WHERE id='${news}'`);

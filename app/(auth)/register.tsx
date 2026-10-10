@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native'
 import { Link, useRouter } from 'expo-router'
 import { Mail, Lock, User, Eye, EyeOff, ArrowLeft } from 'lucide-react-native'
@@ -35,6 +34,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [created, setCreated] = useState(false)
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {}
@@ -70,7 +70,7 @@ export default function RegisterScreen() {
        * O trigger handle_new_user no Supabase cria automaticamente
        * a row em public.profiles usando raw_user_meta_data.full_name
        */
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: {
@@ -89,17 +89,31 @@ export default function RegisterScreen() {
         return
       }
 
-      Alert.alert(
-        '✅ Conta Criada',
-        'Verifique seu e-mail para confirmar o cadastro antes de entrar.',
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
-      )
+      if (data.session) {
+        router.replace('/(tabs)')
+      } else {
+        setCreated(true)
+      }
     } catch (error) {
       console.error('Register error:', error)
       setErrors({ general: 'Erro inesperado. Verifique sua conexão.' })
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (created) {
+    return (
+      <View className="flex-1 bg-white justify-center p-6">
+        <Text className="text-2xl font-bold mb-4">Confira seu e-mail</Text>
+        <Text className="text-base text-gray-600 mb-6">
+          Verifique sua caixa de entrada e o spam. Confirme o cadastro pelo link recebido e depois entre com seu e-mail e senha.
+        </Text>
+        <TouchableOpacity onPress={() => router.replace('/(auth)/login')} className="bg-red-600 rounded-lg p-4">
+          <Text className="text-white text-center font-bold">Ir para o login</Text>
+        </TouchableOpacity>
+      </View>
+    )
   }
 
   return (

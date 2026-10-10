@@ -19,7 +19,7 @@ A versão web e o APK de teste são gerados pelo workflow [Web e APK Android](ht
 
 - **Web:** o job de deploy publica no GitHub Pages quando **Settings → Pages → Source → GitHub Actions** estiver habilitado.
 - **APK:** após o job Android concluir, baixe o artifact **paroquia-android-apk**, extraia o ZIP e instale o APK. É um build standalone assinado com chave de desenvolvimento, destinado a testes, sem necessidade do Expo Go. Não é uma versão assinada para distribuição na Play Store.
-- **Backend:** configure a variável de Actions `EXPO_PUBLIC_SUPABASE_URL` e o secret `EXPO_PUBLIC_SUPABASE_ANON_KEY` (somente chave pública anon). Execute o workflow novamente. Sem esses valores, o aplicativo abre uma tela informando que os serviços ainda não foram configurados; os módulos não estarão operacionais.
+- **Backend:** integrado ao Supabase **paroquia-conectada**. Web e APK usam `src/config/supabase.public.json`, que contém apenas URL e chave publishable públicas. As permissões são controladas pelo RLS do banco; credenciais administrativas não são incluídas no app.
 
 Não há vídeo de demonstração versionado.
 
@@ -55,7 +55,7 @@ As versões declaradas e os comandos estão em [package.json](package.json).
 | `src/services/` | Operações de dados e funções dos módulos |
 | `src/lib/supabase.ts` | Cliente Supabase, persistência de sessão e cache |
 | `src/types/database.types.ts` | Tipos do banco |
-| `supabase-schema.sql` | Tabelas, políticas RLS, triggers e dados iniciais |
+| `supabase-schema.sql` | Tabelas, políticas RLS, triggers e funções; sem dados fictícios |
 
 As telas utilizam hooks e serviços para acessar o Supabase. O AsyncStorage mantém a sessão e caches de liturgia/notícias; isso não equivale a suporte offline completo.
 
@@ -87,17 +87,18 @@ Configure as variáveis consumidas pelo cliente em `.env.local`:
 
 ```dotenv
 EXPO_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=sua-chave-publica-anon
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-A chave pública depende das permissões do banco. O exemplo também menciona `SUPABASE_SERVICE_ROLE_KEY`, mas ela não é necessária para o aplicativo: mantenha credenciais privilegiadas exclusivamente no ambiente servidor, fora do bundle mobile.
+A URL e a chave publishable são configurações públicas; a proteção dos dados depende do RLS. O cliente também aceita `EXPO_PUBLIC_SUPABASE_ANON_KEY` por compatibilidade. Sem variáveis, usa `src/config/supabase.public.json`. Configure URL e chave do mesmo projeto. Nunca inclua `service_role` ou `sb_secret` no app.
 
 ### Banco de dados
 
 1. Em um projeto Supabase de desenvolvimento, execute [supabase-schema.sql](supabase-schema.sql) no SQL Editor.
 2. O script já habilita RLS, cria as políticas e as funções de contador (`increment_prayer_support`, `light_candle`, `like_news`). Para nomear o primeiro administrador, depois do primeiro cadastro, rode no SQL Editor: `UPDATE public.profiles SET role = 'ADMIN_PARISH' WHERE email = 'seu@email';`.
-3. Substitua os dados iniciais pelos dados da paróquia, incluindo horários e informações de dízimo. Em `tithe_info`, `pix_key_type` aceita `CNPJ`, `CPF`, `EMAIL`, `TELEFONE` ou `ALEATORIA`, e `city` é a cidade que aparece no PIX.
-4. Configure o fluxo de confirmação de e-mail do Supabase Auth e valide cadastro/login.
+3. Cadastre os dados reais da paróquia, incluindo horários e informações de dízimo. O schema não insere exemplos; os dados fictícios ficam apenas em `tests/fixtures/parish-demo.sql`. Em `tithe_info`, `pix_key_type` aceita `CNPJ`, `CPF`, `EMAIL`, `TELEFONE` ou `ALEATORIA`, e `city` é a cidade que aparece no PIX.
+4. Em **Authentication → URL Configuration**, configure o Site URL para a URL publicada do app. Configure SMTP próprio para os cadastros da comunidade e valide a confirmação de e-mail e o login. O app permite entrar com e-mail/senha após confirmar o link.
+5. Os pedidos de oração e contadores exigem login. Perfis e intercessões têm leitura restrita; os pedidos privados ficam disponíveis apenas ao autor e à administração. O schema habilita Realtime para orações, notícias e liturgia.
 
 O SQL cria tipos e tabelas e não é uma migração idempotente: não o reaplique indiscriminadamente em um banco existente.
 
@@ -130,7 +131,7 @@ Os scripts EAS exigem CLI disponível, conta/projeto configurados e configuraç�
 
 ## Verificação e limites atuais
 
-Esta documentação foi conferida com os arquivos do repositório; não certifica execução, build ou integração com um Supabase real.
+O schema foi aplicado ao projeto Supabase `paroquia-conectada`, com sete tabelas protegidas por RLS. Os testes automatizados verificam permissões e contadores. Cadastro por e-mail e uso em dispositivo físico precisam de homologação.
 
 - O workflow executa testes, TypeScript, ESLint, exportação web e build Android em cada PR e na `main` (a publicação do site só acontece na `main`). Há testes do gerador de PIX; ainda não há testes de integração com o Supabase.
 - Ícones do aplicativo e de notificações estão em `assets/`.
@@ -142,7 +143,7 @@ Esta documentação foi conferida com os arquivos do repositório; não certific
 
 ## Próximos passos
 
-- Configurar e homologar o Supabase da paróquia.
+- Cadastrar os dados reais da paróquia, definir o primeiro administrador e homologar cadastro/login.
 - Validar tipos, lint e fluxos em dispositivos.
 - Validar o QR Code PIX com a chave real da paróquia em apps de bancos diferentes.
 - Adicionar testes de integração e demonstração visual.
@@ -172,14 +173,14 @@ Essa indicação foi preservada; o repositório não contém arquivo `LICENSE`. 
 
 Routes live in `app/`; reusable UI, hooks, services and database types live in `src/`. Supabase handles data and authentication, while AsyncStorage persists sessions and selected cached content.
 
-Clone the repository, run `npm install`, copy `.env.example` to `.env.local`, and set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`. Apply `supabase-schema.sql` to a development Supabase project, review its access policies and replace seed data. The SQL is not an idempotent migration. Keep service-role credentials server-side.
+Clone the repository, run `npm install`, copy `.env.example` to `.env.local`, and set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`. Apply `supabase-schema.sql` to a development Supabase project, review its access policies and enter real parish data; test fixtures are separate from the production schema. The SQL is not an idempotent migration. Keep service-role credentials server-side.
 
 Run `npm start` with an environment compatible with Expo SDK 51. Available scripts are listed above; `npm run type-check` and `npm run lint` are the declared static checks.
 
 ### Current status
 
-This is a work in progress, not a verified production release. The repository includes image assets, ESLint/Babel/Metro configuration, an npm lockfile, an EAS APK profile and a GitHub Actions workflow for web deployment and standalone Android test APKs. Enable GitHub Pages with GitHub Actions as the source. Download the Android artifact after a successful build; it uses a development signing key, not a production store identity. Configure the Supabase URL repository variable and public anon key secret before rebuilding to enable live features. Without them, the app displays a setup-pending screen. Physical-device and live-backend validation remain required.
+This is a work in progress, not a verified production release. The repository includes image assets, ESLint/Babel/Metro configuration, an npm lockfile, an EAS APK profile and a GitHub Actions workflow for web deployment and standalone Android test APKs. Enable GitHub Pages with GitHub Actions as the source. Download the Android artifact after a successful build; it uses a development signing key, not a production store identity. Web and Android builds use the public URL and publishable key in `src/config/supabase.public.json`, connected to the `paroquia-conectada` Supabase project. Local environment variables can override that configuration. Physical-device and live-backend validation remain required.
 
-PIX QR codes follow the Central Bank BR Code standard (computed field lengths and CRC16), checked against the official example from the Pix manual; they are static codes with no automatic payment confirmation. Private prayer access requires policy review. Local caches do not provide full offline support.
+PIX QR codes follow the Central Bank BR Code standard (computed field lengths and CRC16), checked against the official example from the Pix manual; they are static codes with no automatic payment confirmation. Private prayers are visible only to their author and parish administrators; prayer writes and counter operations require authentication. Local caches do not provide full offline support.
 
 Maintained in **Renan Augusto dos Santos**' GitHub account. The previous ownership notice (“Propriedade de Tupysa / Paróquia [Nome]. Uso interno.”) remains unchanged; no standalone license file is included.

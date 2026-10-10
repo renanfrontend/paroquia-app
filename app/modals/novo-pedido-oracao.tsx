@@ -80,8 +80,10 @@ export default function NovoPedidoOracaoModal() {
         data: { user },
       } = await supabase.auth.getUser()
 
+      if (!user) throw new Error('Entre na sua conta para enviar o pedido.')
+
       await prayerService.createPrayerRequest({
-        user_id: user?.id ?? null,
+        user_id: user.id,
         author_name: authorName.trim(),
         intention: intention.trim(),
         category,
@@ -91,7 +93,7 @@ export default function NovoPedidoOracaoModal() {
       Alert.alert(
         '🙏 Pedido Enviado',
         isPrivate
-          ? 'Sua intenção confidencial foi encaminhada ao pároco.'
+          ? 'Sua intenção confidencial foi encaminhada à administração da paróquia.'
           : 'Sua intenção foi publicada no mural de orações.',
         [{ text: 'Amém', onPress: () => router.back() }],
       )
@@ -226,7 +228,7 @@ export default function NovoPedidoOracaoModal() {
                 </Text>
                 <Text className="text-xs text-yellow-800 mt-1">
                   Não aparece no mural público. Vai direto para a lista de
-                  intercessão do pároco.
+                  intercessão da administração da paróquia.
                 </Text>
               </View>
             </View>

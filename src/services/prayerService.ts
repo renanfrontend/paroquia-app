@@ -160,10 +160,10 @@ export const prayerService = {
           event: 'INSERT',
           schema: 'public',
           table: 'prayer_requests',
-          filter: 'is_private=eq.false AND is_approved=eq.true',
+          filter: 'is_private=eq.false',
         },
         (payload) => {
-          if (payload.new) {
+          if (payload.new?.is_approved === true) {
             onInsert(payload.new as PrayerRequest)
           }
         },
