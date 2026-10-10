@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native'
-import { ZoomIn, ZoomOut } from 'lucide-react-native'
+import { View, Text, TouchableOpacity, ScrollView, Linking } from 'react-native'
+import { ZoomIn, ZoomOut, ExternalLink } from 'lucide-react-native'
 import { Database } from '@/types/database.types'
 
 interface LiturgyReaderProps {
@@ -28,8 +28,10 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
   }
 
   const liturgyColor = LITURGY_COLOR_MAP[liturgy.liturgical_color] || '#10b981'
-  const colorName =
-    Object.entries(LITURGY_COLOR_MAP).find(([, v]) => v === liturgyColor)?.[0] || 'VERDE'
+  const colorKey = LITURGY_COLOR_MAP[liturgy.liturgical_color] ? liturgy.liturgical_color : 'VERDE'
+  const colorName = colorKey.charAt(0) + colorKey.slice(1).toLowerCase()
+  // No branco, texto escuro: texto branco sobre fundo quase branco ficava ilegível.
+  const onColor = colorKey === 'BRANCO' ? '#111827' : '#ffffff'
 
   return (
     <View className="flex-1 bg-white">
@@ -39,11 +41,11 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
         className="p-4 flex-row items-center justify-between"
       >
         <View className="flex-1">
-          <Text className="text-xs text-white font-semibold opacity-75 mb-1">
+          <Text style={{ color: onColor }} className="text-xs font-semibold opacity-75 mb-1">
             Cor Litúrgica do Dia
           </Text>
-          <Text className="text-lg font-bold text-white">
-            {colorName === 'BRANCO' ? 'Branco' : colorName}
+          <Text style={{ color: onColor }} className="text-lg font-bold">
+            {colorName}
           </Text>
         </View>
 
@@ -58,7 +60,7 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
                 : 'bg-white/50 active:bg-white'
             }`}
           >
-            <ZoomOut size={20} color="white" />
+            <ZoomOut size={20} color={onColor} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleZoom(true)}
@@ -69,7 +71,7 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
                 : 'bg-white/50 active:bg-white'
             }`}
           >
-            <ZoomIn size={20} color="white" />
+            <ZoomIn size={20} color={onColor} />
           </TouchableOpacity>
         </View>
       </View>
@@ -88,7 +90,7 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
         </Text>
 
         {/* 1ª Leitura */}
-        {liturgy.first_reading_text && (
+        {(liturgy.first_reading_ref || liturgy.first_reading_text) && (
           <View className="mb-6">
             <Text
               style={{ fontSize: fontSize - 2 }}
@@ -104,17 +106,19 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
                 {liturgy.first_reading_ref}
               </Text>
             )}
-            <Text
-              style={{ fontSize }}
-              className="text-gray-800 leading-relaxed"
-            >
-              {liturgy.first_reading_text}
-            </Text>
+            {liturgy.first_reading_text && (
+              <Text
+                style={{ fontSize }}
+                className="text-gray-800 leading-relaxed"
+              >
+                {liturgy.first_reading_text}
+              </Text>
+            )}
           </View>
         )}
 
         {/* Salmo Responsorial */}
-        {liturgy.psalm_text && (
+        {(liturgy.psalm_ref || liturgy.psalm_text) && (
           <View className="mb-6">
             <Text
               style={{ fontSize: fontSize - 2 }}
@@ -140,17 +144,19 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
                 </Text>
               </View>
             )}
-            <Text
-              style={{ fontSize }}
-              className="text-gray-800 leading-relaxed"
-            >
-              {liturgy.psalm_text}
-            </Text>
+            {liturgy.psalm_text && (
+              <Text
+                style={{ fontSize }}
+                className="text-gray-800 leading-relaxed"
+              >
+                {liturgy.psalm_text}
+              </Text>
+            )}
           </View>
         )}
 
         {/* 2ª Leitura */}
-        {liturgy.second_reading_text && (
+        {(liturgy.second_reading_ref || liturgy.second_reading_text) && (
           <View className="mb-6">
             <Text
               style={{ fontSize: fontSize - 2 }}
@@ -166,17 +172,19 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
                 {liturgy.second_reading_ref}
               </Text>
             )}
-            <Text
-              style={{ fontSize }}
-              className="text-gray-800 leading-relaxed"
-            >
-              {liturgy.second_reading_text}
-            </Text>
+            {liturgy.second_reading_text && (
+              <Text
+                style={{ fontSize }}
+                className="text-gray-800 leading-relaxed"
+              >
+                {liturgy.second_reading_text}
+              </Text>
+            )}
           </View>
         )}
 
         {/* Evangelho */}
-        {liturgy.gospel_text && (
+        {(liturgy.gospel_ref || liturgy.gospel_text) && (
           <View className="mb-6 p-3 bg-red-50 rounded border border-red-200">
             <Text
               style={{ fontSize: fontSize - 2 }}
@@ -192,13 +200,27 @@ export function LiturgyReader({ liturgy }: LiturgyReaderProps) {
                 {liturgy.gospel_ref}
               </Text>
             )}
-            <Text
-              style={{ fontSize }}
-              className="text-red-900 leading-relaxed font-semibold"
-            >
-              {liturgy.gospel_text}
-            </Text>
+            {liturgy.gospel_text && (
+              <Text
+                style={{ fontSize }}
+                className="text-red-900 leading-relaxed font-semibold"
+              >
+                {liturgy.gospel_text}
+              </Text>
+            )}
           </View>
+        )}
+
+        {/* Leituras completas na fonte (o app guarda só as referências) */}
+        {liturgy.source_url && (
+          <TouchableOpacity
+            onPress={() => Linking.openURL(liturgy.source_url as string)}
+            className="mb-6 flex-row items-center justify-center gap-2 rounded-lg border border-gray-300 p-3 active:bg-gray-100"
+            accessibilityRole="link"
+          >
+            <ExternalLink size={18} color="#374151" />
+            <Text className="font-semibold text-gray-800">Ler as leituras completas</Text>
+          </TouchableOpacity>
         )}
 
         {/* Reflexão */}

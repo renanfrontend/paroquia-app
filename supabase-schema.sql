@@ -69,9 +69,11 @@ CREATE TABLE public.daily_liturgy (
   second_reading_ref TEXT,
   second_reading_text TEXT,
   gospel_ref TEXT NOT NULL,
-  gospel_text TEXT NOT NULL,
+  gospel_text TEXT,
   reflection TEXT,
   audio_url TEXT,
+  -- Link para as leituras completas na fonte (o robô guarda só as referências).
+  source_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -463,5 +465,43 @@ CREATE INDEX idx_support_user ON public.prayer_supports(user_id);
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.prayer_requests, public.news_posts, public.daily_liturgy;
+  END IF;
+END $$;
+
+-- ==============================================================================
+-- NOTÍCIAS DA IGREJA (preenchidas pelo robô scripts/update-content.mjs)
+-- ==============================================================================
+-- Manchetes da Igreja (Vatican News em português e CNBB), com link para a matéria original.
+CREATE TABLE IF NOT EXISTS public.church_news (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source TEXT NOT NULL CHECK (source IN ('VATICAN_NEWS', 'CNBB')),
+  title TEXT NOT NULL,
+  summary TEXT,
+  link TEXT NOT NULL UNIQUE,
+  image_url TEXT,
+  published_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_church_news_published ON public.church_news(published_at DESC);
+
+ALTER TABLE public.church_news ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read church news" ON public.church_news;
+CREATE POLICY "Public read church news" ON public.church_news
+  FOR SELECT USING (true);
+
+-- Leitura para o app; escrita só pela chave service_role (que ignora o RLS).
+REVOKE ALL ON public.church_news FROM anon, authenticated;
+GRANT SELECT ON public.church_news TO anon, authenticated;
+
+-- Tempo real: notícias novas aparecem no app sem recarregar.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime')
+     AND NOT EXISTS (
+       SELECT 1 FROM pg_publication_tables
+       WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'church_news'
+     ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.church_news;
   END IF;
 END $$;

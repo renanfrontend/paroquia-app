@@ -1,0 +1,34 @@
+name: Liturgia e notícias
+
+# Atualiza a liturgia do dia e as manchetes da Igreja no Supabase.
+# Roda de hora em hora (o GitHub pode atrasar alguns minutos) e pode ser disparado à mão.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: conteudo
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Atualizar liturgia e notícias
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::warning::Falta o segredo SUPABASE_SERVICE_ROLE_KEY; nada foi atualizado (veja o README)."
+            exit 0
+          fi
+          node scripts/update-content.mjs
